@@ -14,6 +14,8 @@ export async function POST(request: Request) {
       suggestedEdit,
       abTestId,
       abTestVersion,
+      wordId, // ADDED: for version tracking
+      createdAtCommit, // ADDED: commit SHA when feedback created
     } = await request.json();
 
     // Validate required fields
@@ -37,7 +39,9 @@ export async function POST(request: Request) {
       comment,
       suggestedEdit,
       abTestId,
-      abTestVersion
+      abTestVersion,
+      wordId, // ADDED
+      createdAtCommit // ADDED
     );
 
     return NextResponse.json({ feedback });

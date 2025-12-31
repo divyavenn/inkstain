@@ -5,8 +5,8 @@ import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { Feedback, Chapter } from '@/types';
 import LikesHeatmapView from './LikesHeatmapView';
-import EditsInlineView from './EditsInlineView';
 import CommentsView from './CommentsView';
+import VersionTimeline from './VersionTimeline';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -18,7 +18,7 @@ const Container = styled.div`
 const TopHeader = styled.header`
   background: white;
   border-bottom: 1px solid #e0e0e0;
-  padding: 1rem 2rem;
+  padding: 1.5rem 2rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -29,13 +29,39 @@ const TopHeaderContent = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 2rem;
 `;
 
-const Title = styled.h1`
-  font-size: 1.5rem;
+const HeaderLeft = styled.div`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+`;
+
+const ChapterTitle = styled.h1`
+  font-size: 1.25rem;
   font-weight: 600;
   color: #1a1a1a;
   margin: 0;
+`;
+
+const HeaderStats = styled.div`
+  display: flex;
+  gap: 1.5rem;
+`;
+
+const HeaderStat = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #666;
+`;
+
+const HeaderStatValue = styled.span`
+  font-weight: 600;
+  color: #1a1a1a;
 `;
 
 const ShareLink = styled.a`
@@ -43,6 +69,7 @@ const ShareLink = styled.a`
   color: #1976d2;
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap;
 
   &:hover {
     text-decoration: underline;
@@ -63,27 +90,13 @@ const Sidebar = styled(motion.aside)`
   flex-direction: column;
 `;
 
-const SidebarSection = styled.div`
-  padding: 2rem 0;
-  border-bottom: 1px solid #e0e0e0;
-`;
-
-const SidebarTitle = styled.h3`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 0 2rem;
-  margin-bottom: 1rem;
-`;
-
 const ChapterList = styled.ul`
   list-style: none;
+  padding: 1rem 0;
 `;
 
 const ChapterItem = styled.li<{ $active: boolean }>`
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
   background: ${props => props.$active ? '#f0f0f0' : 'transparent'};
@@ -98,73 +111,18 @@ const ChapterItem = styled.li<{ $active: boolean }>`
   }
 `;
 
-const GlobalStats = styled.div`
-  padding: 0 2rem;
-`;
-
-const GlobalStatRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-  font-size: 0.875rem;
-  color: #666;
-`;
-
-const GlobalStatValue = styled.span`
-  font-weight: 600;
-  color: #1a1a1a;
-`;
-
 const Content = styled.div`
   flex: 1;
   overflow-y: auto;
   background: #fafafa;
 `;
 
-const ChapterHeader = styled.div`
-  background: white;
-  border-bottom: 1px solid #e0e0e0;
-  padding: 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 50;
-`;
-
-const ChapterTitle = styled.h2`
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 1.5rem;
-`;
-
-const ChapterStats = styled.div`
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1.5rem;
-`;
-
-const ChapterStat = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const ChapterStatLabel = styled.span`
-  font-size: 0.75rem;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.25rem;
-`;
-
-const ChapterStatValue = styled.span`
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-`;
-
 const TabContainer = styled.div`
   display: flex;
   gap: 0.5rem;
+  padding: 1rem 2rem;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
 `;
 
 const Tab = styled.button<{ $active: boolean }>`
@@ -203,7 +161,59 @@ const EmptyState = styled.div`
   margin: 0 auto;
 `;
 
-type ViewType = 'likes' | 'comments' | 'edits';
+const VersionBanner = styled.div`
+  background: #fff3cd;
+  border-bottom: 1px solid #ffc107;
+  padding: 0.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const BannerText = styled.span`
+  font-size: 0.9375rem;
+  color: #856404;
+`;
+
+const ReturnButton = styled.button`
+  padding: 0.5rem 1rem;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: #1565c0;
+  }
+`;
+
+const PreComputeIndicator = styled.div<{ $status: 'computing' | 'complete' | 'error' }>`
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: ${props => {
+    switch (props.$status) {
+      case 'computing': return '#ffa726';
+      case 'complete': return '#66bb6a';
+      case 'error': return '#ef5350';
+    }
+  }};
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+type ViewType = 'likes' | 'comments';
 
 export default function AuthorDashboard() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
@@ -215,6 +225,11 @@ export default function AuthorDashboard() {
   const [chapterHtml, setChapterHtml] = useState<string>('');
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('likes');
+  const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+  const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
+  const [versionInfo, setVersionInfo] = useState<{ date: Date; author: string; message: string } | null>(null);
+  const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
+  const [preComputeProgress, setPreComputeProgress] = useState(0);
 
   useEffect(() => {
     fetchFeedback();
@@ -225,8 +240,41 @@ export default function AuthorDashboard() {
   useEffect(() => {
     if (selectedChapterId) {
       fetchChapterContent(selectedChapterId);
+      // Start pre-computation in background
+      startPreComputation(selectedChapterId);
     }
   }, [selectedChapterId]);
+
+  const startPreComputation = async (chapterId: number) => {
+    try {
+      // Check if already complete
+      const statusResponse = await fetch(`/api/chapters/${chapterId}/precompute`);
+      const statusData = await statusResponse.json();
+
+      if (statusData.status === 'complete') {
+        setPreComputeStatus('complete');
+        return;
+      }
+
+      // Start pre-computation
+      setPreComputeStatus('computing');
+      setPreComputeProgress(0);
+
+      const response = await fetch(`/api/chapters/${chapterId}/precompute`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        setPreComputeStatus('complete');
+        setPreComputeProgress(100);
+      } else {
+        setPreComputeStatus('error');
+      }
+    } catch (error) {
+      console.error('Pre-computation error:', error);
+      setPreComputeStatus('error');
+    }
+  };
 
   const fetchFeedback = async () => {
     try {
@@ -253,13 +301,33 @@ export default function AuthorDashboard() {
     }
   };
 
-  const fetchChapterContent = async (chapterId: number) => {
+  const fetchChapterContent = async (chapterId: number, commitSha?: string) => {
     setLoadingChapter(true);
     try {
-      const response = await fetch(`/api/chapters/${chapterId}`);
+      const url = commitSha
+        ? `/api/chapters/${chapterId}/versions/${commitSha}`
+        : `/api/chapters/${chapterId}`;
+
+      const response = await fetch(url);
       const data = await response.json();
+
       setChapterContent(data.content || '');
       setChapterHtml(data.html || '');
+
+      if (!commitSha) {
+        // Fetching current version - store commit SHA
+        setCurrentCommitSha(data.commitSha || '');
+        setVersionInfo(null);
+      }
+
+      if (data.version) {
+        // Fetching historical version - store version info
+        setVersionInfo({
+          date: new Date(data.version.date),
+          author: data.version.author,
+          message: data.version.message
+        });
+      }
     } catch (error) {
       console.error('Error fetching chapter content:', error);
     } finally {
@@ -281,14 +349,6 @@ export default function AuthorDashboard() {
     console.log('Discarded edit:', feedbackId);
   };
 
-  const globalStats = {
-    total: feedback.length,
-    likes: feedback.filter(f => f.feedbackType === 'like').length,
-    dislikes: feedback.filter(f => f.feedbackType === 'dislike').length,
-    comments: feedback.filter(f => f.feedbackType === 'comment').length,
-    edits: feedback.filter(f => f.feedbackType === 'edit').length,
-  };
-
   const chapterFeedback = selectedChapterId
     ? feedback.filter(f => f.chapterId === selectedChapterId)
     : [];
@@ -306,7 +366,9 @@ export default function AuthorDashboard() {
     return (
       <Container>
         <TopHeader>
-          <Title>Loading...</Title>
+          <TopHeaderContent>
+            <ChapterTitle>Loading...</ChapterTitle>
+          </TopHeaderContent>
         </TopHeader>
       </Container>
     );
@@ -316,7 +378,31 @@ export default function AuthorDashboard() {
     <Container>
       <TopHeader>
         <TopHeaderContent>
-          <Title>Author Dashboard</Title>
+          <HeaderLeft>
+            {selectedChapter && (
+              <>
+                <ChapterTitle>{selectedChapter.title}</ChapterTitle>
+                <HeaderStats>
+                  <HeaderStat>
+                    <span>Likes:</span>
+                    <HeaderStatValue>{chapterStats.likes}</HeaderStatValue>
+                  </HeaderStat>
+                  <HeaderStat>
+                    <span>Dislikes:</span>
+                    <HeaderStatValue>{chapterStats.dislikes}</HeaderStatValue>
+                  </HeaderStat>
+                  <HeaderStat>
+                    <span>Comments:</span>
+                    <HeaderStatValue>{chapterStats.comments}</HeaderStatValue>
+                  </HeaderStat>
+                  <HeaderStat>
+                    <span>Edits:</span>
+                    <HeaderStatValue>{chapterStats.edits}</HeaderStatValue>
+                  </HeaderStat>
+                </HeaderStats>
+              </>
+            )}
+          </HeaderLeft>
           {shareUrl && (
             <ShareLink href={shareUrl} target="_blank" rel="noopener noreferrer">
               Reader Link →
@@ -325,52 +411,51 @@ export default function AuthorDashboard() {
         </TopHeaderContent>
       </TopHeader>
 
+      {selectedChapterId && currentCommitSha && (
+        <VersionTimeline
+          chapterId={selectedChapterId}
+          currentCommitSha={currentCommitSha}
+          onVersionChange={(sha) => {
+            setSelectedVersion(sha);
+            fetchChapterContent(selectedChapterId, sha);
+          }}
+        />
+      )}
+
+      {selectedVersion && selectedVersion !== currentCommitSha && versionInfo && (
+        <VersionBanner>
+          <BannerText>
+            Viewing version from {versionInfo.date.toLocaleDateString()}
+            {versionInfo.message && `: "${versionInfo.message}"`}
+          </BannerText>
+          <ReturnButton onClick={() => {
+            setSelectedVersion(null);
+            if (selectedChapterId) {
+              fetchChapterContent(selectedChapterId);
+            }
+          }}>
+            Return to Current
+          </ReturnButton>
+        </VersionBanner>
+      )}
+
       <Main>
         <Sidebar
           initial={{ x: -280 }}
           animate={{ x: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          <SidebarSection>
-            <SidebarTitle>Chapters</SidebarTitle>
-            <ChapterList>
-              {chapters.map(chapter => (
-                <ChapterItem
-                  key={chapter.id}
-                  $active={chapter.id === selectedChapterId}
-                  onClick={() => setSelectedChapterId(chapter.id)}
-                >
-                  {chapter.title}
-                </ChapterItem>
-              ))}
-            </ChapterList>
-          </SidebarSection>
-
-          <SidebarSection>
-            <SidebarTitle>Overall Stats</SidebarTitle>
-            <GlobalStats>
-              <GlobalStatRow>
-                <span>Total Feedback</span>
-                <GlobalStatValue>{globalStats.total}</GlobalStatValue>
-              </GlobalStatRow>
-              <GlobalStatRow>
-                <span>Likes</span>
-                <GlobalStatValue>{globalStats.likes}</GlobalStatValue>
-              </GlobalStatRow>
-              <GlobalStatRow>
-                <span>Dislikes</span>
-                <GlobalStatValue>{globalStats.dislikes}</GlobalStatValue>
-              </GlobalStatRow>
-              <GlobalStatRow>
-                <span>Comments</span>
-                <GlobalStatValue>{globalStats.comments}</GlobalStatValue>
-              </GlobalStatRow>
-              <GlobalStatRow>
-                <span>Edits</span>
-                <GlobalStatValue>{globalStats.edits}</GlobalStatValue>
-              </GlobalStatRow>
-            </GlobalStats>
-          </SidebarSection>
+          <ChapterList>
+            {chapters.map(chapter => (
+              <ChapterItem
+                key={chapter.id}
+                $active={chapter.id === selectedChapterId}
+                onClick={() => setSelectedChapterId(chapter.id)}
+              >
+                {chapter.title}
+              </ChapterItem>
+            ))}
+          </ChapterList>
         </Sidebar>
 
         <Content>
@@ -381,49 +466,20 @@ export default function AuthorDashboard() {
             </EmptyState>
           ) : (
             <>
-              <ChapterHeader>
-                <ChapterTitle>{selectedChapter?.title}</ChapterTitle>
-
-                <ChapterStats>
-                  <ChapterStat>
-                    <ChapterStatLabel>Likes</ChapterStatLabel>
-                    <ChapterStatValue>{chapterStats.likes}</ChapterStatValue>
-                  </ChapterStat>
-                  <ChapterStat>
-                    <ChapterStatLabel>Dislikes</ChapterStatLabel>
-                    <ChapterStatValue>{chapterStats.dislikes}</ChapterStatValue>
-                  </ChapterStat>
-                  <ChapterStat>
-                    <ChapterStatLabel>Comments</ChapterStatLabel>
-                    <ChapterStatValue>{chapterStats.comments}</ChapterStatValue>
-                  </ChapterStat>
-                  <ChapterStat>
-                    <ChapterStatLabel>Edits</ChapterStatLabel>
-                    <ChapterStatValue>{chapterStats.edits}</ChapterStatValue>
-                  </ChapterStat>
-                </ChapterStats>
-
-                <TabContainer>
-                  <Tab
-                    $active={activeView === 'likes'}
-                    onClick={() => setActiveView('likes')}
-                  >
-                    Likes
-                  </Tab>
-                  <Tab
-                    $active={activeView === 'comments'}
-                    onClick={() => setActiveView('comments')}
-                  >
-                    Comments
-                  </Tab>
-                  <Tab
-                    $active={activeView === 'edits'}
-                    onClick={() => setActiveView('edits')}
-                  >
-                    Edits
-                  </Tab>
-                </TabContainer>
-              </ChapterHeader>
+              <TabContainer>
+                <Tab
+                  $active={activeView === 'likes'}
+                  onClick={() => setActiveView('likes')}
+                >
+                  Heatmap
+                </Tab>
+                <Tab
+                  $active={activeView === 'comments'}
+                  onClick={() => setActiveView('comments')}
+                >
+                  Comments & Edits
+                </Tab>
+              </TabContainer>
 
               <ViewContainer>
                 {loadingChapter ? (
@@ -445,12 +501,7 @@ export default function AuthorDashboard() {
                     {activeView === 'comments' && (
                       <CommentsView
                         chapterText={chapterContent}
-                        feedback={chapterFeedback}
-                      />
-                    )}
-                    {activeView === 'edits' && (
-                      <EditsInlineView
-                        chapterText={chapterContent}
+                        chapterHtml={chapterHtml}
                         feedback={chapterFeedback}
                         onApproveEdit={handleApproveEdit}
                         onDiscardEdit={handleDiscardEdit}
@@ -463,6 +514,13 @@ export default function AuthorDashboard() {
           )}
         </Content>
       </Main>
+
+      {preComputeStatus !== 'idle' && preComputeStatus !== 'complete' && (
+        <PreComputeIndicator $status={preComputeStatus}>
+          {preComputeStatus === 'computing' && '⏳ Pre-computing versions...'}
+          {preComputeStatus === 'error' && '❌ Pre-computation failed'}
+        </PreComputeIndicator>
+      )}
     </Container>
   );
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import FeedbackPopover from './FeedbackPopover';
+import { WordToken } from '@/types';
 
 const ReaderContainer = styled(motion.div)`
   max-width: 42rem;
@@ -125,6 +126,9 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
   const [savedFeedback, setSavedFeedback] = useState<SavedFeedback[]>([]);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [commitSha, setCommitSha] = useState<string>('');
+  const [wordTokens, setWordTokens] = useState<WordToken[]>([]);
+  const [loadingTokens, setLoadingTokens] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -138,10 +142,31 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
       const response = await fetch(`/api/chapters/${chapterId}?readerId=${readerId}`);
       const data = await response.json();
       setChapterData(data);
+      const sha = data.commitSha || '';
+      setCommitSha(sha);
+
+      // Fetch word tokens for this version
+      if (sha) {
+        fetchWordTokens(sha);
+      }
     } catch (error) {
       console.error('Error fetching chapter:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWordTokens = async (sha: string) => {
+    try {
+      setLoadingTokens(true);
+      const response = await fetch(`/api/chapters/${chapterId}/tokens?commitSha=${sha}`);
+      const data = await response.json();
+      setWordTokens(data.tokens || []);
+    } catch (error) {
+      console.error('Error fetching word tokens:', error);
+      setWordTokens([]);
+    } finally {
+      setLoadingTokens(false);
     }
   };
 
@@ -168,20 +193,49 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
-    // Calculate character offset in the content
-    const contentText = contentRef.current.innerText;
-    const beforeSelection = contentText.indexOf(text);
+    // Calculate character offset by walking the DOM tree
+    // This matches how the dashboard processes positions
+    const getTextPosition = (node: Node, targetNode: Node, targetOffset: number): number => {
+      let position = 0;
 
-    if (beforeSelection !== -1) {
-      // Position to the right side of selection, vertically centered
-      setSelectedText({
-        text,
-        start: beforeSelection,
-        end: beforeSelection + text.length,
-        x: rect.right,
-        y: rect.top + window.scrollY + (rect.height / 2),
-      });
-    }
+      const walk = (current: Node): boolean => {
+        if (current === targetNode) {
+          position += targetOffset;
+          return true;
+        }
+
+        if (current.nodeType === Node.TEXT_NODE) {
+          if (current === targetNode) {
+            position += targetOffset;
+            return true;
+          }
+          position += (current.textContent || '').length;
+        } else if (current.nodeType === Node.ELEMENT_NODE) {
+          for (const child of Array.from(current.childNodes)) {
+            if (walk(child)) {
+              return true;
+            }
+          }
+        }
+
+        return false;
+      };
+
+      walk(node);
+      return position;
+    };
+
+    const start = getTextPosition(contentRef.current, range.startContainer, range.startOffset);
+    const end = getTextPosition(contentRef.current, range.endContainer, range.endOffset);
+
+    // Position to the right side of selection, vertically centered
+    setSelectedText({
+      text,
+      start,
+      end,
+      x: rect.right,
+      y: rect.top + window.scrollY + (rect.height / 2),
+    });
   };
 
   useEffect(() => {
@@ -205,6 +259,22 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
   ) => {
     if (!selectedText || !chapterData) return;
 
+    // Find word ID for selected text
+    let wordId: string | undefined;
+    if (wordTokens.length > 0) {
+      // Find the first word that overlaps with selection
+      const firstWord = wordTokens.find(token =>
+        (token.charStart >= selectedText.start && token.charStart < selectedText.end) ||
+        (token.charEnd > selectedText.start && token.charEnd <= selectedText.end) ||
+        (token.charStart <= selectedText.start && token.charEnd >= selectedText.end)
+      );
+      wordId = firstWord?.wordId;
+    }
+
+    if (!wordId) {
+      console.warn('No word ID found for selection - feedback may not track across versions');
+    }
+
     try {
       const response = await fetch('/api/feedback', {
         method: 'POST',
@@ -216,6 +286,8 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
           snippetStart: selectedText.start,
           snippetEnd: selectedText.end,
           feedbackType: type,
+          createdAtCommit: commitSha,
+          wordId: wordId, // ADDED: Word ID for version tracking
           comment,
           suggestedEdit,
         }),

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getChapterById, getABTestsForChapter, getOrCreateABTestAssignment } from '@/lib/db';
 import { getChapterData } from '@/lib/chapters';
+import { getCurrentCommitForFile } from '@/lib/git';
 
 export async function GET(
   request: Request,
@@ -23,6 +24,15 @@ export async function GET(
       return NextResponse.json({ error: 'Chapter file not found' }, { status: 404 });
     }
 
+    // Get current commit SHA for version tracking
+    let commitSha: string | null = null;
+    try {
+      commitSha = await getCurrentCommitForFile(chapter.filename);
+    } catch (error) {
+      console.warn('Could not get current commit for chapter:', error);
+      // Continue without commit SHA if git is not available
+    }
+
     // Get A/B tests for this chapter
     const abTests = getABTestsForChapter(chapterId);
 
@@ -39,6 +49,7 @@ export async function GET(
       chapter,
       content: chapterData.content,
       html: chapterData.html,
+      commitSha, // ADDED: Current commit SHA for version tracking
       abTests,
       assignments,
     });

@@ -3,52 +3,16 @@
 import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { Feedback } from '@/types';
+import ChapterText from './ChapterText';
 
 const Container = styled.div`
   max-width: 42rem;
   margin: 0 auto;
 `;
 
-const ChapterText = styled.div`
-  line-height: 1.6;
-  font-size: 1.125rem;
-  color: #2a2a2a;
+const HeatmapChapterText = styled(ChapterText)`
   position: relative;
   isolation: isolate;
-
-  p {
-    margin-bottom: 1rem;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-    font-weight: 600;
-    color: #1a1a1a;
-  }
-
-  blockquote {
-    border-left: 3px solid #e0e0e0;
-    padding-left: 1.5rem;
-    margin: 1rem 0;
-    color: #666;
-    font-style: italic;
-  }
-
-  strong {
-    font-weight: 600;
-  }
-
-  em {
-    font-style: italic;
-  }
-
-  code {
-    background: #f5f5f5;
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
-    font-family: monospace;
-  }
 
   .heatmap-word {
     position: relative;
@@ -247,10 +211,10 @@ export default function LikesHeatmapView({ chapterText, chapterHtml, feedback }:
 
   return (
     <Container>
-      <ChapterText
+      <HeatmapChapterText
+        html={processedHtml}
         onMouseOver={handleMouseOver}
         onMouseOut={handleMouseOut}
-        dangerouslySetInnerHTML={{ __html: processedHtml }}
       />
 
       {tooltip && (

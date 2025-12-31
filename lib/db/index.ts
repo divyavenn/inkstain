@@ -10,6 +10,7 @@ db.pragma('journal_mode = WAL');
 
 // Initialize database schema
 export function initDB() {
+  // Create tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS readers (
       id TEXT PRIMARY KEY,
@@ -65,8 +66,38 @@ export function initDB() {
       FOREIGN KEY (ab_test_id) REFERENCES ab_tests(id)
     );
 
+    CREATE TABLE IF NOT EXISTS word_id_counter (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      next_id INTEGER NOT NULL DEFAULT 1
+    );
+
+    INSERT OR IGNORE INTO word_id_counter (id, next_id) VALUES (1, 1);
+  `);
+
+  // Add word tracking columns if they don't exist (migration)
+  try {
+    // Check if word_id column exists
+    const columns = db.prepare("PRAGMA table_info(feedback)").all() as Array<{ name: string }>;
+    const hasWordId = columns.some(col => col.name === 'word_id');
+    const hasCreatedAtCommit = columns.some(col => col.name === 'created_at_commit');
+
+    if (!hasWordId) {
+      db.exec('ALTER TABLE feedback ADD COLUMN word_id TEXT');
+    }
+
+    if (!hasCreatedAtCommit) {
+      db.exec('ALTER TABLE feedback ADD COLUMN created_at_commit TEXT');
+    }
+  } catch (error) {
+    console.error('Error during migration:', error);
+  }
+
+  // Create indexes
+  db.exec(`
     CREATE INDEX IF NOT EXISTS idx_feedback_reader ON feedback(reader_id);
     CREATE INDEX IF NOT EXISTS idx_feedback_chapter ON feedback(chapter_id);
+    CREATE INDEX IF NOT EXISTS idx_feedback_word ON feedback(word_id);
+    CREATE INDEX IF NOT EXISTS idx_feedback_created_commit ON feedback(created_at_commit);
     CREATE INDEX IF NOT EXISTS idx_ab_assignments ON ab_test_assignments(ab_test_id, reader_id);
   `);
 }
@@ -176,17 +207,21 @@ export function createFeedback(
   comment?: string,
   suggestedEdit?: string,
   abTestId?: number,
-  abTestVersion?: 'A' | 'B'
+  abTestVersion?: 'A' | 'B',
+  wordId?: string,
+  createdAtCommit?: string
 ): Feedback {
   const result = db.prepare(`
     INSERT INTO feedback (
       reader_id, chapter_id, snippet_text, snippet_start, snippet_end,
-      feedback_type, comment, suggested_edit, ab_test_id, ab_test_version
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      feedback_type, comment, suggested_edit, ab_test_id, ab_test_version,
+      word_id, created_at_commit
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     readerId, chapterId, snippetText, snippetStart, snippetEnd,
     feedbackType, comment || null, suggestedEdit || null,
-    abTestId || null, abTestVersion || null
+    abTestId || null, abTestVersion || null,
+    wordId || null, createdAtCommit || null
   );
 
   return db.prepare(`
@@ -195,6 +230,7 @@ export function createFeedback(
            snippet_end as snippetEnd, feedback_type as feedbackType,
            comment, suggested_edit as suggestedEdit,
            ab_test_id as abTestId, ab_test_version as abTestVersion,
+           word_id as wordId, created_at_commit as createdAtCommit,
            created_at as createdAt
     FROM feedback WHERE id = ?
   `).get(result.lastInsertRowid) as Feedback;
@@ -207,6 +243,7 @@ export function getAllFeedback(): Feedback[] {
            snippet_end as snippetEnd, feedback_type as feedbackType,
            comment, suggested_edit as suggestedEdit,
            ab_test_id as abTestId, ab_test_version as abTestVersion,
+           word_id as wordId, created_at_commit as createdAtCommit,
            created_at as createdAt
     FROM feedback
     ORDER BY created_at DESC
@@ -220,6 +257,7 @@ export function getFeedbackForChapter(chapterId: number): Feedback[] {
            snippet_end as snippetEnd, feedback_type as feedbackType,
            comment, suggested_edit as suggestedEdit,
            ab_test_id as abTestId, ab_test_version as abTestVersion,
+           word_id as wordId, created_at_commit as createdAtCommit,
            created_at as createdAt
     FROM feedback
     WHERE chapter_id = ?
@@ -227,7 +265,25 @@ export function getFeedbackForChapter(chapterId: number): Feedback[] {
   `).all(chapterId) as Feedback[];
 }
 
+// Export db instance for use in other modules
+export function getDb() {
+  return db;
+}
+
 // Initialize DB on import
 initDB();
+
+// Run migrations (async, don't block startup)
+// Import dynamically to avoid circular dependencies
+import('./migrations').then(({ runMigrations }) => {
+  runMigrations().catch(err => {
+    console.error('Failed to run migrations:', err);
+  });
+}).catch(err => {
+  console.error('Failed to load migrations module:', err);
+});
+
+// Note: Word ID counter will be initialized by tokenizer module when first accessed
+// This avoids circular dependency issues
 
 export default db;
