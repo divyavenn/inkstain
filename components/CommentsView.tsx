@@ -26,138 +26,139 @@ const CommentsChapterText = styled(ChapterText)`
   max-width: 42rem;
 
   .highlighted-text {
-    padding: 2px 0;
+    margin: 0 -0.4em;
+    padding: 0.1em 0.4em;
+    border-radius: 0.8em 0.3em;
+    background: transparent;
+    background-image: linear-gradient(to right, rgba(255,225,0,0.1), rgba(255,225,0,0.7) 4%, rgba(255,225,0,0.3));
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    border-bottom: 2px solid #fbc02d;
-    background-color: #fff9c4;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: filter 0.15s ease;
   }
 
   .highlighted-text[data-is-edit="true"] {
-    background-color: #fff3e0;
-    border-bottom-color: #ff9800;
+    background-image: linear-gradient(to right, rgba(245,158,11,0.1), rgba(245,158,11,0.7) 4%, rgba(245,158,11,0.3));
   }
 
   .highlighted-text[data-is-hovered="true"] {
-    background-color: #bbdefb;
-    border-bottom-color: #1976d2;
+    background-image: linear-gradient(to right, rgba(99,102,241,0.1), rgba(99,102,241,0.7) 4%, rgba(99,102,241,0.3));
   }
 
   .highlighted-text[data-is-edit="true"][data-is-hovered="true"] {
-    background-color: #fff3e0;
-    border-bottom-color: #ff9800;
+    background-image: linear-gradient(to right, rgba(245,158,11,0.15), rgba(245,158,11,0.8) 4%, rgba(245,158,11,0.4));
+    filter: brightness(0.95);
   }
 
   .highlighted-text[data-is-active="true"] {
-    background-color: #e3f2fd;
+    filter: brightness(0.92);
   }
 
   .edited-text {
-    background-color: #fff3e0;
-    padding: 2px 0;
-    border-bottom: 2px solid #ff9800;
+    margin: 0 -0.4em;
+    padding: 0.1em 0.4em;
+    border-radius: 0.8em 0.3em;
+    background: transparent;
+    background-image: linear-gradient(to right, rgba(245,158,11,0.1), rgba(245,158,11,0.65) 4%, rgba(245,158,11,0.3));
     font-weight: 500;
     cursor: pointer;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
 `;
 
 const CommentsPanel = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #e0e0e0;
+  border-left: 1px solid rgba(26,26,24,0.07);
+  background: rgba(26,26,24,0.015);
 `;
 
 const CommentsPanelHeader = styled.div`
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(26,26,24,0.06);
 `;
 
 const CommentsTitle = styled.h3`
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(26,26,24,0.35);
   margin: 0;
 `;
 
 const CommentsCount = styled.span`
-  color: #666;
-  font-size: 0.875rem;
+  color: rgba(26,26,24,0.35);
+  font-size: 0.65rem;
   font-weight: 400;
-  margin-left: 0.5rem;
+  margin-left: 0.4rem;
 `;
 
 const CommentsList = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0;
 `;
 
 const CommentCard = styled(motion.div)<{ $isFiltered: boolean; $isHovered: boolean; $isEdit?: boolean }>`
-  background: ${props => props.$isHovered ? (props.$isEdit ? '#fff3e0' : '#e3f2fd') : '#f9f9f9'};
-  border: 2px solid ${props => props.$isHovered ? (props.$isEdit ? '#ff9800' : '#1976d2') : 'transparent'};
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid rgba(26,26,24,0.055);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
   opacity: ${props => props.$isFiltered ? 1 : 0.3};
-
-  &:hover {
-    background: ${props => props.$isFiltered ? (props.$isEdit ? '#fff3e0' : '#e3f2fd') : '#f0f0f0'};
-    border-color: ${props => props.$isEdit ? '#ff9800' : '#1976d2'};
-  }
+  background: ${props => props.$isHovered ? 'rgba(26,26,24,0.035)' : 'transparent'};
+  border-left: 2px solid ${props => props.$isHovered
+    ? (props.$isEdit ? 'rgba(185,120,40,0.6)' : 'rgba(80,100,200,0.45)')
+    : 'transparent'};
+  &:hover { background: rgba(26,26,24,0.025); }
 `;
 
 const CommentSnippet = styled.div<{ $isEdit?: boolean }>`
-  background: white;
-  padding: 0.75rem;
-  border-radius: 6px;
+  font-family: var(--font-playfair), Georgia, serif;
   font-style: italic;
-  color: #555;
-  font-size: 0.875rem;
-  margin-bottom: 0.75rem;
-  border-left: 3px solid ${props => props.$isEdit ? '#ff9800' : '#1976d2'};
+  font-size: 0.82rem;
+  color: rgba(26,26,24,0.55);
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
 `;
 
 const CommentText = styled.div`
-  color: #2a2a2a;
-  line-height: 1.5;
-  font-size: 0.9375rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: #1a1a18;
+  line-height: 1.55;
   margin-bottom: 0.5rem;
 `;
 
 const EditSuggestion = styled.div`
-  background: white;
-  padding: 0.75rem;
-  border-radius: 6px;
-  color: #e65100;
-  font-size: 0.875rem;
-  margin-bottom: 0.75rem;
-  border-left: 3px solid #ff9800;
-  font-weight: 500;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: rgba(26,26,24,0.7);
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+  border-left: 2px solid rgba(185,120,40,0.5);
+  padding-left: 0.75rem;
 `;
 
 const PreviewHint = styled.div`
-  font-size: 0.75rem;
-  color: #ff9800;
+  font-size: 0.7rem;
+  color: rgba(180,120,40,0.7);
   font-style: italic;
-  margin-bottom: 0.5rem;
-  padding: 0.5rem;
-  background: #fffbf0;
-  border-radius: 4px;
+  margin-bottom: 0.4rem;
 `;
 
 const CommentMeta = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.75rem;
-  color: #999;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.68rem;
+  color: rgba(26,26,24,0.32);
   gap: 0.5rem;
+  margin-top: 0.25rem;
 `;
 
 const MetaLeft = styled.div`
@@ -167,11 +168,11 @@ const MetaLeft = styled.div`
 `;
 
 const ReaderBadge = styled.span<{ $isEdit?: boolean }>`
-  background: ${props => props.$isEdit ? '#ff9800' : '#1976d2'};
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-weight: 600;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.68rem;
+  color: rgba(26,26,24,0.45);
+  font-weight: 500;
+  letter-spacing: 0.02em;
 `;
 
 const ActionButtons = styled.div`
@@ -180,50 +181,49 @@ const ActionButtons = styled.div`
 `;
 
 const ActionButton = styled.button<{ $variant: 'approve' | 'discard' }>`
-  padding: 0.4rem 0.75rem;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid ${props => props.$variant === 'approve' ? 'rgba(60,140,70,0.4)' : 'rgba(180,60,60,0.4)'};
+  border-radius: 3px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-
-  ${props => props.$variant === 'approve' ? `
-    background: #66bb6a;
-    color: white;
-    &:hover {
-      background: #4caf50;
-    }
-  ` : `
-    background: #ef5350;
-    color: white;
-    &:hover {
-      background: #e53935;
-    }
-  `}
+  transition: all 0.15s ease;
+  background: transparent;
+  color: ${props => props.$variant === 'approve' ? 'rgba(40,120,50,0.75)' : 'rgba(160,50,50,0.75)'};
+  &:hover {
+    background: ${props => props.$variant === 'approve' ? 'rgba(60,140,70,0.08)' : 'rgba(180,60,60,0.08)'};
+    border-color: ${props => props.$variant === 'approve' ? 'rgba(60,140,70,0.7)' : 'rgba(180,60,60,0.7)'};
+    color: ${props => props.$variant === 'approve' ? 'rgba(30,100,40,0.9)' : 'rgba(150,40,40,0.9)'};
+  }
 `;
 
 const ClearFilterButton = styled.button`
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: #1976d2;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
+  margin: 0.75rem 1.25rem;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  color: rgba(26,26,24,0.5);
+  border: 1px solid rgba(26,26,24,0.2);
+  border-radius: 3px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
   cursor: pointer;
-  width: 100%;
-  transition: background 0.2s ease;
-
+  width: calc(100% - 2.5rem);
+  transition: all 0.15s ease;
   &:hover {
-    background: #1565c0;
+    background: rgba(26,26,24,0.04);
+    border-color: rgba(26,26,24,0.35);
+    color: rgba(26,26,24,0.7);
   }
 `;
 
 const EmptyState = styled.div`
   text-align: center;
-  padding: 2rem;
-  color: #999;
+  padding: 3rem 1.5rem;
+  color: rgba(26,26,24,0.3);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.82rem;
 `;
 
 interface CommentsViewProps {
@@ -267,7 +267,6 @@ export default function CommentsView({ chapterText, chapterHtml, feedback, onApp
     }
 
     const range = selection.getRangeAt(0);
-    const textContent = chapterText;
 
     const textBefore = range.startContainer.textContent?.slice(0, range.startOffset) || '';
     const parentText = range.startContainer.parentElement?.textContent || '';
@@ -285,6 +284,21 @@ export default function CommentsView({ chapterText, chapterHtml, feedback, onApp
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = chapterHtml;
 
+    // Build plain text from the DOM (same traversal order as charPosition below)
+    const plainText = tempDiv.textContent || '';
+
+    // Re-locate each snippet by searching for its text in the current content,
+    // using the stored position as a hint so duplicates resolve to the right one.
+    const locatedRanges = commentsAndEdits.map(item => {
+      const snippet = item.snippetText;
+      if (!snippet) return null;
+      // Search near the original position first, then from the beginning
+      let idx = plainText.indexOf(snippet, Math.max(0, item.snippetStart - 200));
+      if (idx === -1) idx = plainText.indexOf(snippet);
+      if (idx === -1) return null;
+      return { item, start: idx, end: idx + snippet.length };
+    }).filter((r): r is { item: Feedback; start: number; end: number } => r !== null);
+
     let charPosition = 0;
 
     const processNode = (node: Node): Node => {
@@ -294,15 +308,13 @@ export default function CommentsView({ chapterText, chapterHtml, feedback, onApp
         let textIndex = 0;
 
         // Find all ranges that overlap with this text node
-        const relevantRanges = commentsAndEdits
-          .filter(item => {
-            const start = item.snippetStart;
-            const end = item.snippetEnd;
+        const relevantRanges = locatedRanges
+          .filter(({ start, end }) => {
             return (start < charPosition + text.length && end > charPosition);
           })
-          .map(item => ({
-            start: Math.max(0, item.snippetStart - charPosition),
-            end: Math.min(text.length, item.snippetEnd - charPosition),
+          .map(({ start, end, item }) => ({
+            start: Math.max(0, start - charPosition),
+            end: Math.min(text.length, end - charPosition),
             item
           }));
 

@@ -6,24 +6,48 @@ import { motion, AnimatePresence } from 'framer-motion';
 import FeedbackPopover from './FeedbackPopover';
 import { WordToken } from '@/types';
 
-const ReaderContainer = styled(motion.div)`
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 4rem 2rem;
+const PageDesktop = styled.div`
+  min-height: 100vh;
+  background-color: #dde3ea;
+  background-image: url('/bg-texture.png');
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  background-blend-mode: multiply;
+  padding: 3rem 2rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+const Paper = styled(motion.div)`
+  background: #f5f2ea;
+  border-radius: 6px;
+  box-shadow:
+    0 1px 3px rgba(26, 26, 24, 0.06),
+    0 8px 32px rgba(26, 26, 24, 0.1);
+  width: 100%;
+  max-width: 720px;
+  padding: 4rem 5rem;
+
+  @media (max-width: 640px) {
+    padding: 2.5rem 2rem;
+  }
 `;
 
 const ChapterTitle = styled.h2`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 3rem;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 2.25rem;
+  font-weight: 400;
+  color: #1a1a18;
+  margin-bottom: 2.5rem;
   line-height: 1.2;
 `;
 
 const ChapterContent = styled.div`
-  font-size: 1.125rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1rem;
   line-height: 1.8;
-  color: #2a2a2a;
+  color: #2a2a26;
   position: relative;
 
   p {
@@ -31,22 +55,23 @@ const ChapterContent = styled.div`
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-playfair), Georgia, serif;
+    font-weight: 400;
     margin-top: 2rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    color: #1a1a1a;
+    margin-bottom: 0.75rem;
+    color: #1a1a18;
   }
 
   blockquote {
-    border-left: 3px solid #e0e0e0;
+    border-left: 2px solid rgba(26, 26, 24, 0.2);
     padding-left: 1.5rem;
     margin: 1.5rem 0;
-    color: #666;
+    color: #6a6a60;
     font-style: italic;
   }
 
   ::selection {
-    background-color: #ffe066;
+    background-color: rgba(255, 225, 0, 0.35);
   }
 `;
 
@@ -54,41 +79,16 @@ const SuccessToast = styled(motion.div)`
   position: fixed;
   bottom: 2rem;
   right: 2rem;
-  background: #2e7d32;
-  color: white;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: #1a1a18;
+  color: #f2ede4;
+  padding: 0.75rem 1.25rem;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(26, 26, 24, 0.2);
   z-index: 10000;
-  font-weight: 500;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
 `;
 
-const HighlightOverlay = styled.mark<{ $type: 'like' | 'dislike' | 'comment' | 'edit' }>`
-  background: ${props => {
-    switch (props.$type) {
-      case 'like': return 'rgba(46, 125, 50, 0.2)';
-      case 'dislike': return 'rgba(198, 40, 40, 0.2)';
-      case 'comment': return 'rgba(21, 101, 192, 0.2)';
-      case 'edit': return 'rgba(239, 108, 0, 0.2)';
-      default: return 'rgba(255, 224, 102, 0.3)';
-    }
-  }};
-  cursor: pointer;
-  border-radius: 2px;
-  transition: background 0.2s ease;
-
-  &:hover {
-    background: ${props => {
-      switch (props.$type) {
-        case 'like': return 'rgba(46, 125, 50, 0.3)';
-        case 'dislike': return 'rgba(198, 40, 40, 0.3)';
-        case 'comment': return 'rgba(21, 101, 192, 0.3)';
-        case 'edit': return 'rgba(239, 108, 0, 0.3)';
-        default: return 'rgba(255, 224, 102, 0.4)';
-      }
-    }};
-  }
-`;
 
 interface ChapterReaderProps {
   chapterId: number;
@@ -128,7 +128,7 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
   const [toastMessage, setToastMessage] = useState('');
   const [commitSha, setCommitSha] = useState<string>('');
   const [wordTokens, setWordTokens] = useState<WordToken[]>([]);
-  const [loadingTokens, setLoadingTokens] = useState(false);
+  const [, setLoadingTokens] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -145,7 +145,6 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
       const sha = data.commitSha || '';
       setCommitSha(sha);
 
-      // Fetch word tokens for this version
       if (sha) {
         fetchWordTokens(sha);
       }
@@ -171,7 +170,6 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
   };
 
   const handleTextSelection = (e: MouseEvent) => {
-    // Don't close popover if clicking inside it
     const target = e.target as HTMLElement;
     if (target.closest('[data-feedback-popover]')) {
       return;
@@ -189,12 +187,9 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
       return;
     }
 
-    // Get selection position
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
-    // Calculate character offset by walking the DOM tree
-    // This matches how the dashboard processes positions
     const getTextPosition = (node: Node, targetNode: Node, targetOffset: number): number => {
       let position = 0;
 
@@ -228,7 +223,6 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
     const start = getTextPosition(contentRef.current, range.startContainer, range.startOffset);
     const end = getTextPosition(contentRef.current, range.endContainer, range.endOffset);
 
-    // Position to the right side of selection, vertically centered
     setSelectedText({
       text,
       start,
@@ -259,10 +253,8 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
   ) => {
     if (!selectedText || !chapterData) return;
 
-    // Find word ID for selected text
     let wordId: string | undefined;
     if (wordTokens.length > 0) {
-      // Find the first word that overlaps with selection
       const firstWord = wordTokens.find(token =>
         (token.charStart >= selectedText.start && token.charStart < selectedText.end) ||
         (token.charEnd > selectedText.start && token.charEnd <= selectedText.end) ||
@@ -287,14 +279,13 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
           snippetEnd: selectedText.end,
           feedbackType: type,
           createdAtCommit: commitSha,
-          wordId: wordId, // ADDED: Word ID for version tracking
+          wordId: wordId,
           comment,
           suggestedEdit,
         }),
       });
 
       if (response.ok) {
-        // Save feedback to local state for highlighting
         setSavedFeedback(prev => [...prev, {
           snippetStart: selectedText.start,
           snippetEnd: selectedText.end,
@@ -302,23 +293,22 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
           text: selectedText.text,
         }]);
 
-        // Show success message
         const messages = {
-          like: '👍 Liked!',
-          dislike: '👎 Noted',
-          comment: '💬 Comment saved!',
-          edit: '✏️ Edit suggestion saved!',
+          like: 'Liked',
+          dislike: 'Noted',
+          comment: 'Comment saved',
+          edit: 'Edit suggestion saved',
         };
         showToast(messages[type]);
       } else {
-        showToast('❌ Failed to save feedback');
+        showToast('Failed to save feedback');
       }
 
       setSelectedText(null);
       window.getSelection()?.removeAllRanges();
     } catch (error) {
       console.error('Error submitting feedback:', error);
-      showToast('❌ Failed to save feedback');
+      showToast('Failed to save feedback');
     }
   };
 
@@ -328,8 +318,6 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
     }
 
     const plainText = contentRef.current?.innerText || chapterData.content;
-
-    // Sort feedback by start position
     const sortedFeedback = [...savedFeedback].sort((a, b) => a.snippetStart - b.snippetStart);
 
     let result = plainText;
@@ -348,45 +336,47 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
 
   if (loading) {
     return (
-      <ReaderContainer
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <p>Loading chapter...</p>
-      </ReaderContainer>
+      <PageDesktop>
+        <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
+            Loading chapter...
+          </p>
+        </Paper>
+      </PageDesktop>
     );
   }
 
   if (!chapterData) {
     return (
-      <ReaderContainer
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <p>Chapter not found</p>
-      </ReaderContainer>
+      <PageDesktop>
+        <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
+            Chapter not found
+          </p>
+        </Paper>
+      </PageDesktop>
     );
   }
 
   return (
     <>
-      <ReaderContainer
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-      >
-        <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
-        <ChapterContent ref={contentRef}>
-          {savedFeedback.length === 0 ? (
-            <div dangerouslySetInnerHTML={{ __html: chapterData.html }} />
-          ) : (
-            renderContentWithHighlights()
-          )}
-        </ChapterContent>
-      </ReaderContainer>
+      <PageDesktop>
+        <Paper
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -16 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
+          <ChapterContent ref={contentRef}>
+            {savedFeedback.length === 0 ? (
+              <div dangerouslySetInnerHTML={{ __html: chapterData.html }} />
+            ) : (
+              renderContentWithHighlights()
+            )}
+          </ChapterContent>
+        </Paper>
+      </PageDesktop>
 
       {selectedText && (
         <FeedbackPopover
@@ -399,9 +389,9 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
       <AnimatePresence>
         {showSuccessToast && (
           <SuccessToast
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
+            exit={{ opacity: 0, y: 8 }}
           >
             {toastMessage}
           </SuccessToast>
@@ -410,41 +400,56 @@ export default function ChapterReader({ chapterId, readerId }: ChapterReaderProp
 
       <style jsx global>{`
         .highlight-like {
-          background: rgba(46, 125, 50, 0.2);
-          border-radius: 2px;
+          margin: 0 -0.4em;
+          padding: 0.1em 0.4em;
+          border-radius: 0.8em 0.3em;
+          background: transparent;
+          background-image: linear-gradient(to right, rgba(34,197,94,0.1), rgba(34,197,94,0.55) 4%, rgba(34,197,94,0.25));
           cursor: pointer;
-          transition: background 0.2s ease;
+          -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+          transition: filter 0.15s ease;
         }
-        .highlight-like:hover {
-          background: rgba(46, 125, 50, 0.3);
-        }
+        .highlight-like:hover { filter: brightness(0.88); }
+
         .highlight-dislike {
-          background: rgba(198, 40, 40, 0.2);
-          border-radius: 2px;
+          margin: 0 -0.4em;
+          padding: 0.1em 0.4em;
+          border-radius: 0.8em 0.3em;
+          background: transparent;
+          background-image: linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.55) 4%, rgba(239,68,68,0.25));
           cursor: pointer;
-          transition: background 0.2s ease;
+          -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+          transition: filter 0.15s ease;
         }
-        .highlight-dislike:hover {
-          background: rgba(198, 40, 40, 0.3);
-        }
+        .highlight-dislike:hover { filter: brightness(0.88); }
+
         .highlight-comment {
-          background: rgba(21, 101, 192, 0.2);
-          border-radius: 2px;
+          margin: 0 -0.4em;
+          padding: 0.1em 0.4em;
+          border-radius: 0.8em 0.3em;
+          background: transparent;
+          background-image: linear-gradient(to right, rgba(99,102,241,0.1), rgba(99,102,241,0.55) 4%, rgba(99,102,241,0.25));
           cursor: pointer;
-          transition: background 0.2s ease;
+          -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+          transition: filter 0.15s ease;
         }
-        .highlight-comment:hover {
-          background: rgba(21, 101, 192, 0.3);
-        }
+        .highlight-comment:hover { filter: brightness(0.88); }
+
         .highlight-edit {
-          background: rgba(239, 108, 0, 0.2);
-          border-radius: 2px;
+          margin: 0 -0.4em;
+          padding: 0.1em 0.4em;
+          border-radius: 0.8em 0.3em;
+          background: transparent;
+          background-image: linear-gradient(to right, rgba(245,158,11,0.1), rgba(245,158,11,0.55) 4%, rgba(245,158,11,0.25));
           cursor: pointer;
-          transition: background 0.2s ease;
+          -webkit-box-decoration-break: clone;
+          box-decoration-break: clone;
+          transition: filter 0.15s ease;
         }
-        .highlight-edit:hover {
-          background: rgba(239, 108, 0, 0.3);
-        }
+        .highlight-edit:hover { filter: brightness(0.88); }
       `}</style>
     </>
   );

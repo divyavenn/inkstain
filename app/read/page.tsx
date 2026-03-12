@@ -1,80 +1,92 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import ReaderView from '@/components/ReaderView';
 
-const WelcomeContainer = styled.div`
+const Page = styled.div`
   min-height: 100vh;
+  background-color: #f2ede4;
+  background-image: url('/bg-texture.png');
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  background-blend-mode: multiply;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 2rem;
 `;
 
-const WelcomeCard = styled(motion.div)`
-  background: white;
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 500px;
+const Card = styled(motion.div)`
+  background: rgba(245, 241, 234, 0.95);
+  border: 1px solid rgba(26, 26, 24, 0.1);
+  padding: 3.5rem;
+  border-radius: 4px;
+  max-width: 480px;
   width: 100%;
+  box-shadow: 0 8px 40px rgba(26, 26, 24, 0.08);
 `;
 
 const Title = styled.h1`
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a1a1a;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 2.25rem;
+  font-weight: 400;
+  font-style: italic;
+  color: #1a1a18;
   margin-bottom: 1rem;
+  line-height: 1.2;
 `;
 
 const Description = styled.p`
-  font-size: 1rem;
-  color: #666;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: #5a5a54;
   margin-bottom: 2rem;
-  line-height: 1.6;
+  line-height: 1.65;
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 0.875rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-  transition: border-color 0.2s ease;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid rgba(26, 26, 24, 0.18);
+  border-radius: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9rem;
+  background: rgba(242, 237, 228, 0.5);
+  color: #1a1a18;
+  margin-bottom: 0.875rem;
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: #b8b4aa;
+  }
 
   &:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: rgba(26, 26, 24, 0.45);
   }
 `;
 
 const Button = styled.button`
   width: 100%;
-  padding: 1rem;
-  background: #1a1a1a;
-  color: white;
+  padding: 0.875rem;
+  background: #1a1a18;
+  color: #f2ede4;
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
 
   &:hover {
-    background: #333;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    background: #333330;
   }
 
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
-    transform: none;
   }
 `;
 
@@ -82,15 +94,21 @@ const SkipButton = styled.button`
   width: 100%;
   padding: 0.75rem;
   background: transparent;
-  color: #666;
+  color: #9a9892;
   border: none;
-  font-size: 0.875rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.85rem;
   cursor: pointer;
-  margin-top: 0.5rem;
-  transition: color 0.2s ease;
+  margin-top: 0.25rem;
+  transition: color 0.15s ease;
 
   &:hover {
-    color: #1a1a1a;
+    color: #1a1a18;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 `;
 
@@ -100,7 +118,6 @@ export default function ReadPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if reader already has an ID in localStorage
     const existingReaderId = localStorage.getItem('readerId');
     if (existingReaderId) {
       setReaderId(existingReaderId);
@@ -131,13 +148,13 @@ export default function ReadPage() {
   }
 
   return (
-    <WelcomeContainer>
-      <WelcomeCard
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+    <Page>
+      <Card
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        <Title>Welcome, Reader!</Title>
+        <Title>Welcome, Reader.</Title>
         <Description>
           You're about to help make this book better. Highlight any passage to
           share your thoughts, suggest edits, or simply let the author know what
@@ -150,19 +167,13 @@ export default function ReadPage() {
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleStartReading()}
         />
-        <Button
-          onClick={() => handleStartReading()}
-          disabled={loading}
-        >
+        <Button onClick={() => handleStartReading()} disabled={loading}>
           {loading ? 'Loading...' : 'Start Reading'}
         </Button>
-        <SkipButton
-          onClick={() => handleStartReading(true)}
-          disabled={loading}
-        >
+        <SkipButton onClick={() => handleStartReading(true)} disabled={loading}>
           Skip and read anonymously
         </SkipButton>
-      </WelcomeCard>
-    </WelcomeContainer>
+      </Card>
+    </Page>
   );
 }

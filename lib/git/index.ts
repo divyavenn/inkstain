@@ -7,7 +7,7 @@ import { GitNotAvailableError, GitFileNotFoundError } from './error-handling';
 const git: SimpleGit = simpleGit(process.cwd());
 
 // Cache configuration
-const GIT_LOG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const GIT_LOG_CACHE_TTL = 10 * 1000; // 10 seconds (short for development - see new commits quickly)
 const FILE_CONTENT_CACHE_TTL = 0; // Indefinite (immutable)
 
 // LRU caches

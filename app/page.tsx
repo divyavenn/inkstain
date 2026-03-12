@@ -2,89 +2,234 @@
 
 import Link from 'next/link';
 import styled from 'styled-components';
+import Highlighter from '@/components/Highlighter';
 
-const Container = styled.div`
+const Page = styled.div`
   min-height: 100vh;
+  background-color: #f2ede4;
+  background-image: url('/bg-texture.png');
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  background-blend-mode: multiply;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  padding: 6rem 8vw;
+`;
+
+const Layout = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  max-width: 1200px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Left = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+const Headline = styled.h1`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: clamp(2.8rem, 5vw, 4.5rem);
+  font-weight: 400;
+  line-height: 1.1;
+  color: #1a1a18;
+  letter-spacing: -0.02em;
+
+  em {
+    font-style: italic;
+    display: block;
+  }
+`;
+
+const Body = styled.p`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  line-height: 1.65;
+  color: #3a3a36;
+  max-width: 38ch;
+`;
+
+const CTARow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+`;
+
+const PrimaryButton = styled(Link)`
+  display: inline-block;
+  padding: 0.9rem 2rem;
+  background: #1a1a18;
+  color: #f2ede4;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #333330;
+  }
+`;
+
+const SecondaryButton = styled(Link)`
+  display: inline-block;
+  padding: 0.9rem 2rem;
+  background: transparent;
+  color: #1a1a18;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  border: 1.5px solid #1a1a18;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(26, 26, 24, 0.06);
+  }
+`;
+
+const Specs = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(26, 26, 24, 0.15);
+`;
+
+const Spec = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+`;
+
+const SpecLabel = styled.span`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #888880;
+`;
+
+const SpecValue = styled.span`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1rem;
+  color: #1a1a18;
+`;
+
+const Right = styled.div`
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 2rem;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
-const Card = styled.div`
-  background: white;
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-width: 500px;
+const BookPreview = styled.div`
+  background: #1a1a18;
+  border-radius: 6px;
+  padding: 2.5rem;
   width: 100%;
-  text-align: center;
-`;
-
-const Title = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin-bottom: 1rem;
-`;
-
-const Subtitle = styled.p`
-  font-size: 1.125rem;
-  color: #666;
-  margin-bottom: 2rem;
-  line-height: 1.6;
-`;
-
-const ButtonGroup = styled.div`
+  max-width: 420px;
+  aspect-ratio: 3/4;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  justify-content: space-between;
+  box-shadow: 0 32px 80px rgba(26, 26, 24, 0.2);
 `;
 
-const Button = styled(Link)`
-  padding: 1rem 2rem;
-  background: #1a1a1a;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: block;
-
-  &:hover {
-    background: #333;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
+const BookMeta = styled.div`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(242, 237, 228, 0.4);
 `;
 
-const SecondaryButton = styled(Button)`
-  background: transparent;
-  color: #1a1a1a;
-  border: 2px solid #1a1a1a;
+const BookBody = styled.div`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: rgba(242, 237, 228, 0.6);
+`;
 
-  &:hover {
-    background: #f5f5f5;
-    border-color: #333;
-  }
+
+const BookTitle = styled.div`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.5rem;
+  font-style: italic;
+  color: #f2ede4;
+  line-height: 1.3;
 `;
 
 export default function Home() {
   return (
-    <Container>
-      <Card>
-        <Title>📚 BookBeta</Title>
-        <Subtitle>
-          A minimal, open-source platform for collecting feedback on your writing.
-          Perfect for authors seeking beta reader insights.
-        </Subtitle>
-        <ButtonGroup>
-          <Button href="/read">Read & Give Feedback</Button>
-          <SecondaryButton href="/admin">Author Dashboard</SecondaryButton>
-        </ButtonGroup>
-      </Card>
-    </Container>
+    <Page>
+      <Layout>
+        <Left>
+          <Headline>
+            Introducing
+            <em>Inkstain.</em>
+          </Headline>
+
+          <Body>
+            BookBeta collects word-level reactions from your readers, tracks every revision, and shows you exactly
+            where your writing lands.
+          </Body>
+
+          <CTARow>
+            <PrimaryButton href="/read">Start Reading</PrimaryButton>
+            <SecondaryButton href="/admin">Author Dashboard</SecondaryButton>
+          </CTARow>
+
+          <Specs>
+            <Spec>
+              <SpecLabel>Feedback</SpecLabel>
+              <SpecValue>Word-level precision</SpecValue>
+            </Spec>
+            <Spec>
+              <SpecLabel>Versions</SpecLabel>
+              <SpecValue>Git-backed history</SpecValue>
+            </Spec>
+            <Spec>
+              <SpecLabel>Reactions</SpecLabel>
+              <SpecValue>Likes & inline edits</SpecValue>
+            </Spec>
+            <Spec>
+              <SpecLabel>Interface</SpecLabel>
+              <SpecValue>Distraction-free</SpecValue>
+            </Spec>
+          </Specs>
+        </Left>
+
+        <Right>
+          <BookPreview>
+            <BookMeta>Chapter 1 — Draft</BookMeta>
+            <BookBody>
+              The morning light came through the curtains in{' '}
+              <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>thin, pale ribbons</Highlighter> — the kind that
+              make dust look deliberate. She sat at the table with her coffee,
+              watching the steam rise and curl and{' '}
+              <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>disappear into nothing</Highlighter>, which
+              seemed, at the time, like a kind of answer.
+            </BookBody>
+            <BookTitle>
+              Something<br />Worth Saying
+            </BookTitle>
+          </BookPreview>
+        </Right>
+      </Layout>
+    </Page>
   );
 }
