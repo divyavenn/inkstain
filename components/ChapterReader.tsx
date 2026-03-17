@@ -32,28 +32,12 @@ function selectedTextToLines(selectedText: string, markdown: string): { startLin
   return { startLine, endLine };
 }
 
-const PageDesktop = styled.div`
-  min-height: 100vh;
-  background-color: #dde3ea;
-  background-image: url('/bg-texture.png');
-  background-repeat: repeat;
-  background-size: 400px 400px;
-  background-blend-mode: multiply;
-  padding: 3rem 2rem 4rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-`;
-
 const Paper = styled(motion.div)`
-  ${SURFACE_TEXTURE}
-  border-radius: 6px;
-  box-shadow: 0 2px 16px rgba(26,26,24,0.07);
-  padding: 3rem 2.5rem 4rem;
+  padding: 4rem 2.5rem 6rem;
   width: 100%;
-  max-width: 860px;
+  max-width: 900px;
+  margin: 0 auto;
   position: relative;
-  z-index: 1;
 `;
 
 const ContentRow = styled.div`
@@ -473,25 +457,21 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
 
   if (loading) {
     return (
-      <PageDesktop>
-        <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
-            Loading chapter...
-          </p>
-        </Paper>
-      </PageDesktop>
+      <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
+          Loading chapter...
+        </p>
+      </Paper>
     );
   }
 
   if (!chapterData) {
     return (
-      <PageDesktop>
-        <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
-            Chapter not found
-          </p>
-        </Paper>
-      </PageDesktop>
+      <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
+          Chapter not found
+        </p>
+      </Paper>
     );
   }
 

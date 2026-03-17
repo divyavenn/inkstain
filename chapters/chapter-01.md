@@ -1,14 +1,13 @@
-
 ---
 title: "chapter one"
 order: 2
 ---
 
-Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that simple.
+Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that easy.
 
 It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her *skioula*, little shade, because he caught her peeping at him from behind a curtain. She hadn’t meant to stare, or more precisely to be caught staring. She’d heard the music faintly from some distant hall and walked towards it in a trance. 
 
-The prince sat on a window ledge, silhouetted against the evening. His bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara.
+The prince sat on a window ledge, sihouetted against the evening. The moonlight bleached his hair to silver and his skin to the palest rose. His bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara. And like the gods’ own ambrosia his voice filled the room.
 
 *The sun died early*
 
@@ -32,7 +31,7 @@ She sung it shyly and his hands magically plucked out the accompaniment. Later h
 
 Hesypera took up crouching like a mouse near whatever room the prince was in. People smiled when they saw the small girl sitting quietly in the corner, so totally absorbed in the small tasks her mother gave her. But more often they didn’t notice her at all, or forgot quickly that she was there. And yet always, always Hesypera listened, and in this way learned many things. 
 
-She knew the king of the Eidonians always his son formally, with his name and title. The look in her beloved prince’s eyes as they spoke — half yearning to please, half hopeless — made her want to hate the king, but she could not. All children in the palace ran up to King Oeagrus fearlessly to be swung up on his knee and leave sticky with sweets. The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old. 
+She knew the king of the Eidonians never called his son *little one,* or *dearest*, or *my child.* He addressed him formally, name and title. The look in her beloved prince’s eyes as they spoke — half yearning to please, half hopeless — made her want to hate the king, but she could not. All children in the palace ran up to King Oeagrus fearlessly to be swung up on his knee and leave sticky with sweets. The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old. 
 
 Rumor said the queen’s first cry of pain had beckoned the goddess Eileithyia to her birthing-bed. The midwives had run out half out their minds with fear and awe. Rumor said that Calliope, the great muse herself, had appeared to announce the child and tell all how the king had been blessed: his heir was no less than the son of Apollo and would one day earn his place among the stars.
 

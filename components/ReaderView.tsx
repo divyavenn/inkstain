@@ -14,55 +14,39 @@ const SURFACE_TEXTURE = css`
   background-size: 100px 100px;
 `;
 
-const Desktop = styled.div`
+const Page = styled.div`
   min-height: 100vh;
-  padding: 3% 10% 10% 10%;
-  background-color: #302f2f;
-  display: flex;
-  flex-direction: column;
-`;
-
-const Shell = styled.div`
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 2%;
-  background: transparent;
-`;
-
-const Panel = styled.div`
-  display: flex;
-  flex: 1;
   ${SURFACE_TEXTURE}
-  border-radius: 6px 6px 6px 6px;
-  overflow: hidden;
-  min-height: 0;
   position: relative;
-  z-index: 1;
 `;
 
-const ContentArea = styled.div`
-  flex: 1;
-  overflow-y: auto;
+/* Invisible strip on the left edge that triggers the sidebar */
+const SidebarEdge = styled.div`
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 100vh;
+  z-index: 200;
 `;
 
-const Sidebar = styled(motion.aside)`
+const ChaptersSidebar = styled(motion.aside)`
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
   width: 220px;
-  background: rgba(26,26,24,0.025);
-  border-left: 1px solid rgba(26,26,24,0.06);
+  ${SURFACE_TEXTURE}
+  border-right: 1px solid rgba(26,26,24,0.08);
+  box-shadow: 4px 0 24px rgba(26,26,24,0.08);
+  z-index: 199;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  flex-shrink: 0;
 `;
 
 const SidebarHeader = styled.div`
   padding: 1.5rem 1.5rem 0.5rem;
-  display: flex;
-  align-items: center;
 `;
 
 const SidebarTitle = styled.span`
@@ -82,9 +66,8 @@ const ChapterList = styled.ul`
 const ChapterItem = styled.li<{ $active: boolean }>`
   padding: 0.5rem 1.5rem;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background 0.12s ease;
   border-right: 2px solid ${p => p.$active ? '#b94a36' : 'transparent'};
-  background: transparent;
 
   &:hover {
     background: rgba(26,26,24,0.03);
@@ -109,6 +92,7 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchChapters();
@@ -119,9 +103,7 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
       const response = await fetch('/api/chapters');
       const data = await response.json();
       setChapters(data.chapters);
-      if (data.chapters.length > 0) {
-        setCurrentChapterId(data.chapters[0].id);
-      }
+      if (data.chapters.length > 0) setCurrentChapterId(data.chapters[0].id);
     } catch (error) {
       console.error('Error fetching chapters:', error);
     } finally {
@@ -129,30 +111,20 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
     }
   };
 
-  if (loading) {
-    return <Desktop />;
-  }
+  if (loading) return <Page />;
 
   return (
-    <Desktop>
-      <Shell>
-        <Panel>
-          <ContentArea>
-            <AnimatePresence mode="wait">
-              {currentChapterId && (
-                <ChapterReader
-                  key={currentChapterId}
-                  chapterId={currentChapterId}
-                  sessionId={sessionId}
-                />
-              )}
-            </AnimatePresence>
-          </ContentArea>
+    <Page>
+      <SidebarEdge onMouseEnter={() => setSidebarOpen(true)} />
 
-          <Sidebar
-            initial={{ x: 220 }}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <ChaptersSidebar
+            initial={{ x: -220 }}
             animate={{ x: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            exit={{ x: -220 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            onMouseLeave={() => setSidebarOpen(false)}
           >
             <SidebarHeader>
               <SidebarTitle>Chapters</SidebarTitle>
@@ -162,7 +134,10 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
                 <ChapterItem
                   key={chapter.id}
                   $active={chapter.id === currentChapterId}
-                  onClick={() => setCurrentChapterId(chapter.id)}
+                  onClick={() => {
+                    setCurrentChapterId(chapter.id);
+                    setSidebarOpen(false);
+                  }}
                 >
                   <ChapterItemTitle $active={chapter.id === currentChapterId}>
                     {chapter.title}
@@ -170,9 +145,19 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
                 </ChapterItem>
               ))}
             </ChapterList>
-          </Sidebar>
-        </Panel>
-      </Shell>
-    </Desktop>
+          </ChaptersSidebar>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {currentChapterId && (
+          <ChapterReader
+            key={currentChapterId}
+            chapterId={currentChapterId}
+            sessionId={sessionId}
+          />
+        )}
+      </AnimatePresence>
+    </Page>
   );
 }
