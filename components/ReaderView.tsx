@@ -120,6 +120,7 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
       <AnimatePresence>
         {sidebarOpen && (
           <ChaptersSidebar
+            key="sidebar"
             initial={{ x: -220 }}
             animate={{ x: 0 }}
             exit={{ x: -220 }}
@@ -155,6 +156,9 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
             key={currentChapterId}
             chapterId={currentChapterId}
             sessionId={sessionId}
+            prevChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) - 1]?.id ?? null}
+            nextChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) + 1]?.id ?? null}
+            onNavigate={setCurrentChapterId}
           />
         )}
       </AnimatePresence>

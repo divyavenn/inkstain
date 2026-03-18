@@ -93,15 +93,17 @@ interface ChapterTextProps {
   html: string;
   className?: string;
   onMouseUp?: (e: React.MouseEvent) => void;
+  onClick?: (e: React.MouseEvent) => void;
   onMouseOver?: (e: React.MouseEvent) => void;
   onMouseOut?: (e: React.MouseEvent) => void;
 }
 
-export default function ChapterText({ html, className, onMouseUp, onMouseOver, onMouseOut }: ChapterTextProps) {
+export default function ChapterText({ html, className, onMouseUp, onClick, onMouseOver, onMouseOut }: ChapterTextProps) {
   return (
     <StyledChapterText
       className={className}
       onMouseUp={onMouseUp}
+      onClick={onClick}
       onMouseOver={onMouseOver}
       onMouseOut={onMouseOut}
       dangerouslySetInnerHTML={{ __html: html }}

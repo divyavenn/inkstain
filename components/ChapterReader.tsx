@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import styled, { css } from 'styled-components';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
+import { Cursor } from 'motion-plus/react';
 import FeedbackPopover from './FeedbackPopover';
 
 
@@ -143,9 +144,37 @@ const PillHint = styled.span`
   opacity: 0.7;
 `;
 
+const ChapterNav = styled.div`
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 2.5rem 4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const NavButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: rgba(26,26,24,0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.15s ease;
+
+  &:hover { color: #1a1a18; }
+`;
+
 interface ChapterReaderProps {
   chapterId: string;
   sessionId: string;
+  prevChapterId: string | null;
+  nextChapterId: string | null;
+  onNavigate: (id: string) => void;
 }
 
 interface ChapterData {
@@ -188,7 +217,7 @@ interface CommentPosition {
   text: string;
 }
 
-export default function ChapterReader({ chapterId, sessionId }: ChapterReaderProps) {
+export default function ChapterReader({ chapterId, sessionId, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
@@ -197,9 +226,11 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
   const [commentPositions, setCommentPositions] = useState<CommentPosition[]>([]);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [hoveredMarkType, setHoveredMarkType] = useState<'like' | 'dislike' | 'comment' | null>(null);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const marginColRef = useRef<HTMLDivElement>(null);
+  const scrollSentinelRef = useRef<HTMLDivElement>(null);
   // Refs so keydown handler (added once) can always read latest state
   const pendingRef = useRef(pendingFeedback);
   const editRef = useRef(editState);
@@ -209,6 +240,36 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
   useEffect(() => { editRef.current = editState; }, [editState]);
   useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
   useEffect(() => { savedRef.current = savedFeedback; }, [savedFeedback]);
+
+  // Track hovered mark type for custom cursor
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const onOver = (e: MouseEvent) => {
+      const mark = (e.target as HTMLElement).closest('mark');
+      if (!mark) { setHoveredMarkType(null); return; }
+      if (mark.classList.contains('highlight-like')) setHoveredMarkType('like');
+      else if (mark.classList.contains('highlight-dislike')) setHoveredMarkType('dislike');
+      else if (mark.classList.contains('highlight-comment')) setHoveredMarkType('comment');
+    };
+    const onOut = (e: MouseEvent) => {
+      if (!(e.relatedTarget as HTMLElement)?.closest?.('mark')) setHoveredMarkType(null);
+    };
+    el.addEventListener('mouseover', onOver);
+    el.addEventListener('mouseout', onOut);
+    return () => { el.removeEventListener('mouseover', onOver); el.removeEventListener('mouseout', onOut); };
+  }, []);
+
+  // Auto-advance to next chapter when sentinel scrolls into view
+  useEffect(() => {
+    if (!nextChapterId || !scrollSentinelRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) onNavigate(nextChapterId); },
+      { threshold: 1.0 }
+    );
+    observer.observe(scrollSentinelRef.current);
+    return () => observer.disconnect();
+  }, [nextChapterId, onNavigate]);
 
   // Recompute margin comment positions after each render
   useLayoutEffect(() => {
@@ -271,7 +332,7 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
     try {
       const url = p.commentText ? '/api/public/comments' : '/api/public/reactions';
       const body = p.commentText
-        ? JSON.stringify({ ...base, body: p.commentText })
+        ? JSON.stringify({ ...base, body: p.commentText, selectedText: p.text })
         : JSON.stringify({ ...base, reaction: p.reaction });
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
       if (!res.ok) {
@@ -481,17 +542,17 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
         mark.highlight-like {
           background: linear-gradient(to right, rgba(34,197,94,0.1), rgba(34,197,94,0.45) 4%, rgba(34,197,94,0.2));
           border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
         }
         mark.highlight-dislike {
           background: linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.45) 4%, rgba(239,68,68,0.2));
           border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
         }
         mark.highlight-comment {
           background: linear-gradient(to right, rgba(253,224,71,0.2), rgba(253,224,71,0.6) 4%, rgba(253,224,71,0.3));
           border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
         }
         mark.highlight-like:hover, mark.highlight-dislike:hover, mark.highlight-comment:hover { filter: brightness(0.88); }
       `}</style>
@@ -518,6 +579,18 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
             </MarginColumn>
           </ContentRow>
         </Paper>
+
+      <ChapterNav>
+        {prevChapterId
+          ? <NavButton onClick={() => onNavigate(prevChapterId)}>← Previous chapter</NavButton>
+          : <span />}
+        {nextChapterId
+          ? <NavButton onClick={() => onNavigate(nextChapterId)}>Next chapter →</NavButton>
+          : <span />}
+      </ChapterNav>
+
+      {/* Scroll sentinel — entering viewport auto-advances to next chapter */}
+      <div ref={scrollSentinelRef} style={{ height: 1 }} />
 
       {pendingFeedback && (
         <Pill
@@ -556,6 +629,34 @@ export default function ChapterReader({ chapterId, sessionId }: ChapterReaderPro
           onClose={() => setEditState(null)}
         />
       )}
+
+      <AnimatePresence>
+        {hoveredMarkType && (
+          <Cursor
+            key="mark-cursor"
+            follow
+            offset={{ x: 14, y: 14 }}
+            variants={{ exit: { opacity: 0, scale: 0.85 } }}
+            style={{
+              background: hoveredMarkType === 'like'
+                ? 'rgba(34,197,94,0.9)'
+                : hoveredMarkType === 'dislike'
+                ? 'rgba(239,68,68,0.9)'
+                : 'rgba(202,138,4,0.9)',
+              borderRadius: 999,
+              padding: '3px 10px',
+              color: 'white',
+              fontSize: '0.75rem',
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              letterSpacing: '0.02em',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {hoveredMarkType === 'like' ? '👍 Liked' : hoveredMarkType === 'dislike' ? '👎 Pass' : '💬 Note'}
+          </Cursor>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showSuccessToast && (

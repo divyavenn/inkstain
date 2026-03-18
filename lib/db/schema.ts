@@ -184,7 +184,10 @@ CREATE TABLE IF NOT EXISTS feedback_comments (
   reader_invite_id uuid REFERENCES reader_invites(id),
   start_line int NOT NULL,
   end_line int NOT NULL,
+  selected_text text,
   body text NOT NULL,
+  char_start int,
+  char_length int,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -202,6 +205,8 @@ CREATE TABLE IF NOT EXISTS suggested_edits (
   original_text text NOT NULL,
   suggested_text text NOT NULL,
   rationale text,
+  char_start int,
+  char_length int,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

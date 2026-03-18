@@ -1,13 +1,13 @@
 ---
-title: "chapter one"
-order: 2
+title: "chapter I"
+order: I
 ---
 
 Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly. But loyalty is rarely that easy.
 
 It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her *skioula*, little shade, because he caught her peeping at him from behind a curtain. She hadn’t meant to stare, or more precisely to be caught staring. She’d heard the music faintly from some distant hall and walked towards it in a trance. 
 
-The prince sat on a window ledge, sihouetted against the evening. The moonlight bleached his hair to silver and his skin to the palest rose. His bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara. And like the gods’ own ambrosia his voice filled the room.
+The prince sat on a window ledge, his hair bleached silver by moonlight. One bare foot beat out a rhythm against the wall and his fingers danced lazily but expertly over the strings of his kithara as he sang.
 
 *The sun died early*
 
@@ -35,17 +35,17 @@ She knew the king of the Eidonians never called his son *little one,* or *dea
 
 Rumor said the queen’s first cry of pain had beckoned the goddess Eileithyia to her birthing-bed. The midwives had run out half out their minds with fear and awe. Rumor said that Calliope, the great muse herself, had appeared to announce the child and tell all how the king had been blessed: his heir was no less than the son of Apollo and would one day earn his place among the stars.
 
-Oeagrus never spoke of it after, nor did anyone else in his presence. He was fair and wise but a man of iron, a fearsome warrior standing two heads above normal men. No one dared rankle his old wound. 
+Oeagrus never spoke of it after, nor did anyone else in his presence. He was fair and wise but a man of iron, a fearsome warrior standing two heads above normal men. 
 
 It was *supposed* to be an honor, of course, having the blood of a god in your lineage. Oeagrus built a new temple to Apollo and sacrificed lavishly every year; to do otherwise would invite the wrath of the gods upon his people. 
 
 Everyone said the queen was a slender, graceful woman, with happy eyes and the gentlest voice you ever heard. She wasted away with fever soon after the birth. The king had once worshipped her every movement, but he did not visit her sickbed. He never held the child. 
 
-If he’d spoken to her, maybe the queen would have wept and said that Apollo decieved her, came to her in the king’s own form, just like Zeus duped the mother of Heracles. Would he have believed it? A woman who could betray you could just as easily lie.  
+If he had spoken to her, maybe she would have wept and pleaded that Apollo decieved her, came to her in the king’s own form, just like Zeus duped the mother of Heracles. Would he have believed it? A woman who could betray you could just as easily lie.  
 
 Maybe he was too kind to disturb her healing with his great anger. Maybe he wished to punish her with his silence. Maybe the happier you are in love, the easier it is to suspect that it was only ever an illusion. Still, he had her grave cleaned every day and planted richly with roses - a gesture of piousness or regret, who knew? 
 
-Of course, everyone watched the prince grow with bated breath. Would he be a warrior like Herakles, a great hunter like Meleager, monster-slayer like Perseus? What glory would he bring to the sons of the Hebrus? They waited for him to strangle snakes in his cradle, to cut down enemy soldiers like dandelions, to make spears and arrows fly as surely as the Fates.
+Of course, everyone watched the prince grow with bated breath. What glory would he bring to the sons of the Hebrus? They waited for him to strangle snakes in his cradle, to cut down enemy soldiers like dandelions, to make spears and arrows fly as surely as the Fates.
 
 The prince did none of those things. He was quicksilver where the king was iron, with wrists like a lark’s whistle and a body corded with lean muscle. He drilled in arms with the other boys, doing only as well as a mortal might.
 
@@ -67,7 +67,7 @@ And perhaps Apollo himself would come and tell his son he had chosen well, and C
 
 Upon Castor’s death the gods, touched by their devotion to each other, entwined them forever in the skies. It had happened before and there was no reason it would not be their fate too, especially because Bendis would surely vouch for her.
 
-When she was old she would remember these first ten years as golden haze speckled with vivid details, faded by much touching. Her father’s metal drinking horn, burnished and slightly dented. Her mother’s scent of blood and flowers and flame. Her bare feet licking the stone floors of the palace as she ran giggling with the other children. Her dim silver needle slipping in and out of taut cloth. The coolness of the river Hebrus on hot, sticky afternoons, easily washing away her childish hurts and tiredness.
+When she was old she would remember these first ten years with an ache. Her father’s metal drinking horn, burnished and slightly dented. Her mother’s scent of blood and flowers and flame. Her bare feet licking the stone floors of the palace as she ran giggling with the other children. Her dim silver needle slipping in and out of taut cloth. The coolness of the river Hebrus on hot, sticky afternoons, easily washing away her childish hurts and tiredness.
 
 Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus. One such thorn arrived on an ox cart shortly after her eleventh birthday.
 

@@ -18,6 +18,7 @@ import matter from 'gray-matter';
 import { marked } from 'marked';
 import crypto from 'crypto';
 import { nanoid } from 'nanoid';
+import { feedbackCharPos } from '../lib/db/charPos.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -396,20 +397,28 @@ async function main() {
       }
       totalReactions += c1Reactions.length;
 
+      const [c1Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c1Id}`;
+      const c1Lines = await sql`SELECT line_number, line_text FROM chapter_version_lines WHERE chapter_version_id = ${c1Id} ORDER BY line_number`;
+
       for (const c of COMMENTS_C1) {
         const ri = c.readerIdx;
+        const rangeLines = (c1Lines as Array<{ line_number: number; line_text: string }>)
+          .filter(l => l.line_number >= c.startLine && l.line_number <= c.endLine && l.line_text.trim() !== '');
+        const selectedText = rangeLines.map(l => l.line_text).join(' ');
+        const pos = selectedText ? feedbackCharPos(c1Ver.rendered_html, selectedText) : null;
         await sql`
-          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, body)
-          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${c.body})
+          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, selected_text, body, char_start, char_length)
+          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${selectedText || null}, ${c.body}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
         `;
       }
       totalComments += COMMENTS_C1.length;
 
       for (const e of EDITS_C1) {
         const ri = e.readerIdx;
+        const pos = feedbackCharPos(c1Ver.rendered_html, e.original);
         await sql`
-          INSERT INTO suggested_edits (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, original_text, suggested_text, rationale)
-          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : null}, ${inviteIds[ri]}, ${e.startLine}, ${e.endLine}, ${e.original}, ${e.suggested}, ${e.rationale})
+          INSERT INTO suggested_edits (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, original_text, suggested_text, rationale, char_start, char_length)
+          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : null}, ${inviteIds[ri]}, ${e.startLine}, ${e.endLine}, ${e.original}, ${e.suggested}, ${e.rationale}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
         `;
       }
       totalEdits += EDITS_C1.length;
@@ -444,11 +453,18 @@ async function main() {
       }
       totalReactions += c2Reactions.length;
 
+      const [c2Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c2Id}`;
+      const c2Lines = await sql`SELECT line_number, line_text FROM chapter_version_lines WHERE chapter_version_id = ${c2Id} ORDER BY line_number`;
+
       for (const c of COMMENTS_C2) {
         const ri = c.readerIdx;
+        const rangeLines = (c2Lines as Array<{ line_number: number; line_text: string }>)
+          .filter(l => l.line_number >= c.startLine && l.line_number <= c.endLine && l.line_text.trim() !== '');
+        const selectedText = rangeLines.map(l => l.line_text).join(' ');
+        const pos = selectedText ? feedbackCharPos(c2Ver.rendered_html, selectedText) : null;
         await sql`
-          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, body)
-          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${c.body})
+          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, selected_text, body, char_start, char_length)
+          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${selectedText || null}, ${c.body}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
         `;
       }
       totalComments += COMMENTS_C2.length;

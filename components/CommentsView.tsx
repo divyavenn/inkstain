@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import ChapterText from './ChapterText';
+import { HeatmapLine } from './LikesHeatmapView';
 
 const Container = styled.div`
   display: grid;
@@ -24,19 +25,22 @@ const AnnotatedChapterText = styled(ChapterText)`
   user-select: text;
   max-width: 42rem;
 
-  .suggestion-highlight {
-    margin: 0 -0.4em;
-    padding: 0.1em 0.4em;
-    border-radius: 0.8em 0.3em;
-    background-image: linear-gradient(to right, rgba(245,158,11,0.1), rgba(245,158,11,0.7) 4%, rgba(245,158,11,0.3));
+  .feedback-block {
     cursor: pointer;
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-    transition: filter 0.15s ease;
   }
 
-  .suggestion-highlight[data-hovered="true"] {
-    filter: brightness(0.9);
+  .line-highlight {
+    border-radius: 0.8em 0.3em;
+    margin: 0 -0.4em;
+    padding: 0.1em 0.4em;
+    background-color: transparent;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-image 0.15s ease;
+  }
+
+  .suggestion-preview {
+    color: rgba(185, 40, 40, 0.9);
   }
 `;
 
@@ -151,6 +155,8 @@ export interface DashComment {
   start_line: number;
   end_line: number;
   body: string;
+  char_start: number | null;
+  char_length: number | null;
   created_at: string;
   reader_name: string | null;
   reader_slug: string | null;
@@ -163,6 +169,8 @@ export interface DashSuggestion {
   original_text: string;
   suggested_text: string;
   rationale: string | null;
+  char_start: number | null;
+  char_length: number | null;
   created_at: string;
   reader_name: string | null;
 }
@@ -175,55 +183,144 @@ interface CommentsViewProps {
   chapterHtml: string;
   comments: DashComment[];
   suggestions: DashSuggestion[];
+  heatmapLines: HeatmapLine[];
 }
 
-function applySuggestionHighlights(html: string, suggestions: DashSuggestion[], hoveredId: string | null): string {
+function charWrap(
+  div: HTMLElement,
+  charIdx: number,
+  length: number,
+  makeEl: () => HTMLElement,
+): void {
+  let charPos = 0;
+  const walk = (node: Node): boolean => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      const start = charIdx - charPos;
+      const end = start + length;
+      if (start >= 0 && end <= text.length) {
+        const el = makeEl();
+        el.textContent = text.slice(start, end);
+        const before = document.createTextNode(text.slice(0, start));
+        const after = document.createTextNode(text.slice(end));
+        node.parentNode?.insertBefore(before, node);
+        node.parentNode?.insertBefore(el, node);
+        node.parentNode?.insertBefore(after, node);
+        node.parentNode?.removeChild(node);
+        return true;
+      }
+      charPos += text.length;
+    } else {
+      for (const child of Array.from(node.childNodes)) {
+        if (walk(child)) return true;
+      }
+    }
+    return false;
+  };
+  walk(div);
+}
+
+function processHtml(
+  html: string,
+  contentLines: HeatmapLine[],
+  comments: DashComment[],
+  suggestions: DashSuggestion[],
+  hoveredPanelId: string | null,
+  hoveredMarkIds: string[],
+  pinnedItemIds: string[] | null,
+  previewSuggId: string | null,
+): string {
   if (typeof window === 'undefined') return html;
   const div = document.createElement('div');
   div.innerHTML = html;
   const fullText = div.textContent || '';
 
-  for (const s of suggestions) {
-    if (!s.original_text) continue;
-    const idx = fullText.indexOf(s.original_text);
-    if (idx === -1) continue;
+  const [r, g, b] = [255, 225, 0];
+  const gradient = (op: number) =>
+    `linear-gradient(to right, rgba(${r},${g},${b},${(op * 0.14).toFixed(2)}), rgba(${r},${g},${b},${op.toFixed(2)}) 4%, rgba(${r},${g},${b},${(op * 0.43).toFixed(2)}))`;
 
-    let charPos = 0;
-    const walk = (node: Node): boolean => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.textContent || '';
-        const start = idx - charPos;
-        const end = start + s.original_text.length;
-        if (start >= 0 && end <= text.length) {
-          const span = document.createElement('span');
-          span.className = 'suggestion-highlight';
-          span.dataset.id = s.id;
-          span.dataset.hovered = String(hoveredId === s.id);
-          span.textContent = text.slice(start, end);
-          const before = document.createTextNode(text.slice(0, start));
-          const after = document.createTextNode(text.slice(end));
-          node.parentNode?.insertBefore(before, node);
-          node.parentNode?.insertBefore(span, node);
-          node.parentNode?.insertBefore(after, node);
-          node.parentNode?.removeChild(node);
-          charPos += text.length;
-          return true;
-        }
-        charPos += text.length;
-      } else {
-        for (const child of Array.from(node.childNodes)) {
-          if (walk(child)) return true;
-        }
-      }
-      return false;
-    };
-    walk(div);
+  // Group comments by unique line range, wrap each range once
+  const grouped = new Map<string, string[]>(); // "start-end" → comment ids
+  for (const c of comments) {
+    const key = `${c.start_line}-${c.end_line}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(c.id);
   }
+
+  for (const [key, ids] of grouped) {
+    const [startLine, endLine] = key.split('-').map(Number);
+
+    // Use stored char_start if available; otherwise fall back to indexOf
+    const representative = comments.find(c => c.start_line === startLine && c.end_line === endLine);
+    let charIdx: number;
+    let searchLength: number;
+    if (representative?.char_start != null && representative?.char_length != null) {
+      charIdx = representative.char_start;
+      searchLength = representative.char_length;
+    } else {
+      const rangeLines = contentLines.filter(l => l.lineNumber >= startLine && l.lineNumber <= endLine);
+      if (rangeLines.length === 0) continue;
+      const searchText = rangeLines.map(l => l.lineText).join(' ');
+      charIdx = fullText.indexOf(searchText);
+      if (charIdx === -1) continue;
+      searchLength = searchText.length;
+    }
+
+    // Opacity: panel hover dims all except the hovered item's mark;
+    // text hover/pin dims all except the active mark
+    let op: number;
+    if (hoveredPanelId !== null) {
+      op = ids.includes(hoveredPanelId) ? 0.85 : 0;
+    } else if (pinnedItemIds !== null) {
+      op = ids.some(id => pinnedItemIds.includes(id)) ? 0.85 : 0.3;
+    } else if (hoveredMarkIds.length > 0) {
+      op = ids.some(id => hoveredMarkIds.includes(id)) ? 0.85 : 0.3;
+    } else {
+      op = 0.55;
+    }
+
+    if (op === 0) continue;
+
+    charWrap(div, charIdx, searchLength, () => {
+      const mark = document.createElement('mark');
+      mark.className = 'line-highlight feedback-block';
+      mark.style.backgroundImage = gradient(op);
+      mark.dataset.itemIds = ids.join(',');
+      return mark;
+    });
+  }
+
+  // Inline edit preview: same charWrap mechanism
+  if (previewSuggId !== null) {
+    const s = suggestions.find(s => s.id === previewSuggId);
+    if (s?.original_text) {
+      const idx = s.char_start ?? (div.textContent || '').indexOf(s.original_text);
+      const len = s.char_length ?? s.original_text.length;
+      if (idx !== -1) {
+        charWrap(div, idx, len, () => {
+          const span = document.createElement('span');
+          span.className = 'suggestion-preview';
+          span.textContent = s.suggested_text;
+          return span;
+        });
+      }
+    }
+  }
+
   return div.innerHTML;
 }
 
-export default function CommentsView({ chapterHtml, comments, suggestions }: CommentsViewProps) {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+export default function CommentsView({ chapterHtml, comments, suggestions, heatmapLines }: CommentsViewProps) {
+  const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
+  const textPanelRef = useRef<HTMLDivElement>(null);
+  const [hoveredMarkIds, setHoveredMarkIds] = useState<string[]>([]);
+  const [pinnedItemIds, setPinnedItemIds] = useState<string[] | null>(null);
+  const [previewSuggId, setPreviewSuggId] = useState<string | null>(null);
+
+  const contentLines = useMemo(
+    () => heatmapLines.filter(l => l.lineText.trim() !== ''),
+    [heatmapLines],
+  );
 
   const items: Item[] = useMemo(() => {
     const all: Item[] = [
@@ -233,33 +330,83 @@ export default function CommentsView({ chapterHtml, comments, suggestions }: Com
     return all.sort((a, b) => a.data.start_line - b.data.start_line);
   }, [comments, suggestions]);
 
+  // Filter panel to the mark under cursor / pinned mark (pinned takes priority)
+  const activeIds = pinnedItemIds ?? (hoveredMarkIds.length > 0 ? hoveredMarkIds : null);
+  const visibleItems = useMemo(() => {
+    if (!activeIds) return items;
+    return items.filter(item => activeIds.includes(item.data.id));
+  }, [items, activeIds]);
+
+  // Scroll text panel to the mark containing the hovered panel item
+  useEffect(() => {
+    if (!hoveredPanelId || !textPanelRef.current) return;
+    const marks = Array.from(textPanelRef.current.querySelectorAll('[data-item-ids]'));
+    const mark = marks.find(m =>
+      (m as HTMLElement).dataset.itemIds!.split(',').includes(hoveredPanelId),
+    );
+    mark?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [hoveredPanelId]);
+
   const processedHtml = useMemo(
-    () => applySuggestionHighlights(chapterHtml, suggestions, hoveredId),
-    [chapterHtml, suggestions, hoveredId],
+    () => processHtml(chapterHtml, contentLines, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId),
+    [chapterHtml, contentLines, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId],
   );
+
+  const handleTextMouseOver = (e: React.MouseEvent) => {
+    const mark = (e.target as HTMLElement).closest('[data-item-ids]') as HTMLElement | null;
+    setHoveredMarkIds(mark ? mark.dataset.itemIds!.split(',') : []);
+  };
+
+  const handleTextMouseOut = (e: React.MouseEvent) => {
+    if (!(e.relatedTarget as HTMLElement)?.closest?.('[data-item-ids]')) {
+      setHoveredMarkIds([]);
+    }
+  };
+
+  const handleTextClick = (e: React.MouseEvent) => {
+    const mark = (e.target as HTMLElement).closest('[data-item-ids]') as HTMLElement | null;
+    if (mark) {
+      const ids = mark.dataset.itemIds!.split(',');
+      setPinnedItemIds(prev =>
+        prev !== null && prev.length === ids.length && ids.every(id => prev.includes(id)) ? null : ids,
+      );
+    } else {
+      setPinnedItemIds(null);
+    }
+  };
 
   return (
     <Container>
-      <TextPanel>
-        <AnnotatedChapterText html={processedHtml} />
+      <TextPanel ref={textPanelRef}>
+        <AnnotatedChapterText
+          html={processedHtml}
+          onMouseOver={handleTextMouseOver}
+          onMouseOut={handleTextMouseOut}
+          onClick={handleTextClick}
+        />
       </TextPanel>
 
       <CommentsPanel>
         <CommentsPanelHeader>
           <CommentsTitle>
             Comments & Edits
-            <CommentsCount>{items.length}</CommentsCount>
+            <CommentsCount>
+              {visibleItems.length}
+              {activeIds !== null && visibleItems.length !== items.length ? ` / ${items.length}` : ''}
+            </CommentsCount>
           </CommentsTitle>
         </CommentsPanelHeader>
 
         <CommentsList>
           {items.length === 0 ? (
             <EmptyState>No comments or edits yet</EmptyState>
+          ) : visibleItems.length === 0 ? (
+            <EmptyState>No feedback on this line</EmptyState>
           ) : (
-            items.map((item, index) => {
+            visibleItems.map((item, index) => {
               const isEdit = item.kind === 'suggestion';
               const id = item.data.id;
-              const isHovered = hoveredId === id;
+              const isHovered = hoveredPanelId === id;
               const readerName = item.data.reader_name;
               const line = `L${item.data.start_line}${item.data.end_line !== item.data.start_line ? `–${item.data.end_line}` : ''}`;
 
@@ -268,8 +415,14 @@ export default function CommentsView({ chapterHtml, comments, suggestions }: Com
                   key={id}
                   $isHovered={isHovered}
                   $isEdit={isEdit}
-                  onMouseEnter={() => setHoveredId(id)}
-                  onMouseLeave={() => setHoveredId(null)}
+                  onMouseEnter={() => {
+                    setHoveredPanelId(id);
+                    if (isEdit) setPreviewSuggId(id);
+                  }}
+                  onMouseLeave={() => {
+                    setHoveredPanelId(null);
+                    setPreviewSuggId(null);
+                  }}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.04 }}

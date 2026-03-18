@@ -390,6 +390,8 @@ interface DashComment {
   start_line: number;
   end_line: number;
   body: string;
+  char_start: number | null;
+  char_length: number | null;
   created_at: string;
   reader_name: string | null;
   reader_slug: string | null;
@@ -402,6 +404,8 @@ interface DashSuggestion {
   original_text: string;
   suggested_text: string;
   rationale: string | null;
+  char_start: number | null;
+  char_length: number | null;
   created_at: string;
   reader_name: string | null;
 }
@@ -440,12 +444,6 @@ export default function AuthorDashboard() {
     }
   }, [selectedChapterId]);
 
-  useEffect(() => {
-    if (chapterVersionId) {
-      fetchHeatmap(chapterVersionId);
-      fetchChapterFeedback(chapterVersionId);
-    }
-  }, [chapterVersionId]);
 
   const startPreComputation = async (chapterId: string) => {
     try {
@@ -547,7 +545,11 @@ export default function AuthorDashboard() {
       setContentChapterId(chapterId);
       setDisplayedCommitSha(nextCommitSha);
       console.log('[dashboard] chapter response keys:', Object.keys(data), 'versionId:', data.versionId);
-      if (data.versionId) setChapterVersionId(data.versionId);
+      if (data.versionId) {
+        setChapterVersionId(data.versionId);
+        fetchHeatmap(data.versionId);
+        fetchChapterFeedback(data.versionId);
+      }
 
       if (!commitSha) {
         setCurrentCommitSha(data.commitSha || '');
@@ -655,6 +657,7 @@ export default function AuthorDashboard() {
                             chapterHtml={chapterHtml}
                             comments={dashComments}
                             suggestions={dashSuggestions}
+                            heatmapLines={heatmapLines}
                           />
                         )}
                       </ContentTransition>

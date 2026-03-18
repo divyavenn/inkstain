@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const readerInviteId = searchParams.get('readerInviteId');
 
   const comments = await sql`
-    SELECT fc.id, fc.start_line, fc.end_line, fc.body, fc.created_at,
+    SELECT fc.id, fc.start_line, fc.end_line, fc.body, fc.char_start, fc.char_length, fc.created_at,
       rp.display_name as reader_name, rp.slug as reader_slug,
       rg.name as group_name, rg.slug as group_slug
     FROM feedback_comments fc
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   `;
 
   const suggestions = await sql`
-    SELECT se.id, se.start_line, se.end_line, se.original_text, se.suggested_text, se.rationale, se.created_at,
+    SELECT se.id, se.start_line, se.end_line, se.original_text, se.suggested_text, se.rationale, se.char_start, se.char_length, se.created_at,
       rp.display_name as reader_name, rp.slug as reader_slug,
       rg.name as group_name, rg.slug as group_slug
     FROM suggested_edits se

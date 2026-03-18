@@ -7,13 +7,13 @@ The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about 
 
 Eurydice was different. There was something unsettling about Eurydice.
 
-They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her. Hesypera sometimes wondered if she was even truly Lady Olyxena’s child; she looked and moved nothing like her mother. An odd scent hung about her wherever she went, a smell like crushed stems and darkened pools that Hesypera instinctively disliked.
+They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her. Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper. Hesypera sometimes wondered if she was even truly Lady Olyxena’s child; she looked and moved nothing like her mother. An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools that she instinctively disliked.
 
-She was glad that there was no talk of Eurydice joining the cult of Bendis. The priestesses criticized her constantly. Eurydice woke up as early or late as she pleased. She disappeared for entire days to wander the woods like a peasant. She climbed trees and played with the goatherds and her hair was always a mess. She even put grubs in her pockets to sneak as treats to the sacred owls, whose feeding was a ritual assigned to Hesypera - an honor she had won with many years of diligent effort.
+She was glad that there was no talk of Eurydice joining the cult of Bendis. Eurydice woke up as early or late as she pleased. She disappeared for entire days to wander the woods like a peasant. She climbed trees and played with the goatherds and her hair was always a mess. She even put grubs in her pockets to sneak as treats to the sacred owls, whose ritual feeding was an honor Hesypera had won with many years of diligent effort.
 
-It annoyed Hesypera that the owls warbled when they saw Eurydice and rubbed their heads against her hands. Even the priestesses seemed to like her — they’d scold her endlessly for her heedlessness but braid flowers in her hair. Hesypera sat at her loom with perfect dignity watching the tips of their fingers slip in and out of her curls, hearing them laugh at her insolence.
+It annoyed Hesypera that the owls warbled when they saw Eurydice and rubbed their heads against her hands. The priestesses laughed at her insolence even as they criticized her constantly. Hesypera sat at her loom with perfect dignity watching the tips of their fingers slip in and out of her curls, braiding flowers in her hair.
 
-The worst was Orpheus, who had instantly decided that Eurydice was their friend. Wherever they went, he invited her. He showed her all their secret spots and hiding places. He offered her everything from his woolen tunic if she was cold to his kithara if she wanted to practice. Hesypera told herself it was because the prince was kind and gentle. Eurydice was his cousin, if not exactly by blood, and if rumors were true she and her mother had fled to King Oeagrus for refuge.
+Orpheus was the worst. Wherever they went, he invited her. He showed her all their secret spots and hiding places. He offered her everything from his woolen tunic if she was cold to his kithara if she wanted to practice. Hesypera told herself it was because her prince was kind and gentle. Eurydice was his cousin, if not exactly by blood, and if rumors were true she and her mother had fled to King Oeagrus for refuge.
 
 One day she could take it no longer. They were sitting together on the stone steps outside the palace enjoying the fickle winter sun, the prince tuning his kithara, Hesypera mending a hole in her father’s robes.
 
@@ -41,7 +41,7 @@ Hesyperia loved how he always went out of his way to fulfill her little wishes, 
 
 “We’re together right now,” Orpheus laughed.
 
-“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars, where there was no one to watch them and nowhere to look but his eyes. She wanted the magic she felt so strongly when they were alone to build up until words of passion poured out of his mouth like music. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
+“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars, where there was no one to watch them and nowhere to look but his eyes. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
 
 The words choked her, so instead she straightened her back, smoothed her hair, smiled demurely, and said in her gentlest, noblest voice, “I’d love it if she came.”
 
@@ -81,11 +81,11 @@ Hesypera hesitated and asked, “What was it like at your father’s court?”
 
 “You mean was my father really a cruel wood god like they say?” Eurydice said calmly. Hesypera blushed.
 
-“Two years after my parents were married, there was a terrible drought. My mother was young and high spirited and outspoken, and she’d long irritated an certain old woman who was used to having everything her way before the new queen. The old woman proclaimed a soothsayer had revealed to her that my mother was the cause of the drought, that she had committed a secret sin against men and the gods.”
+“Two years after my parents were married, there was a terrible drought. The head priestess of the temple said that the oracles all agreed: my mother was the reason the gods were witholding rain. She had committed some secret sin against men and the gods.”
 
 Dimly Hesypera was aware that Orpheus had stopped playing. Eurydice’s voice was hard.
 
-“My father was not a bad man, but I think he was weak. The old woman brought all her allies and the priests together, and they said to offer my mother to the old wood gods as a test of her purity, or maybe a sacrifice. I don’t know.”
+“My father was not a bad man, but I think he was weak. My mother was young and high spirited and outspoken, you see. Until she came, the priestess all but ruled my father, and through him the kingdom. She gathered all the noblemen and convinced them to offer my mother to the old wood gods as a test of her purity, or maybe a sacrifice. I don’t know.”
 
 Silence, broken only by the oars.
 
@@ -109,4 +109,4 @@ Hesypera found her voice again.
 
 Hesypera thought of the Lady Oelyxena, laughing and good natured, the way the youth seemed sapped from her face even though she wasn’t that old. Hesypera, with her childhood habit of moving quietly in the dark, had seen the sudden tears Olyxena wept sometimes, the weariness of her movements when she thought she was alone.
 
-*If I have a gift*, she thought, *it’s seeing what people are like when no one is watching.* Her heart wrung with pity. *I’ll be nice to Eurydice, even if she’s strange, for Oelyxena’s sake.*
+Her heart wrung with pity. *I’ll be nice to Eurydice, even if she’s strange, for Oelyxena’s sake.*
