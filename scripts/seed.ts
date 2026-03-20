@@ -15,10 +15,9 @@ import 'dotenv/config';
 import { neon } from '@neondatabase/serverless';
 import simpleGit from 'simple-git';
 import matter from 'gray-matter';
-import { marked } from 'marked';
-import crypto from 'crypto';
 import { nanoid } from 'nanoid';
-import { feedbackCharPos } from '../lib/db/charPos.js';
+import { feedbackWordPos, htmlToWords, buildWordMap, wordRangeToCharPos } from '../lib/db/wordPos.js';
+import { parseChapter } from '../lib/ingest/parse-chapter.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -29,24 +28,6 @@ if (!DATABASE_URL) {
 const sql = neon(DATABASE_URL);
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function lineHash(text: string) {
-  return crypto.createHash('sha1').update(text).digest('hex').slice(0, 16);
-}
-
-function detectBlockType(line: string): string | null {
-  if (/^#{1,6}\s/.test(line)) return 'heading';
-  if (/^[-*+]\s/.test(line)) return 'list_item';
-  if (/^\d+\.\s/.test(line)) return 'ordered_list_item';
-  if (/^>\s/.test(line)) return 'blockquote';
-  if (/^```/.test(line)) return 'code_fence';
-  if (line.trim() === '') return 'blank';
-  return 'paragraph';
-}
-
-function countWords(text: string) {
-  return text.split(/\s+/).filter(w => w.length > 0).length;
-}
 
 async function rawQuery(q: string) {
   return sql.query(q);
@@ -98,19 +79,19 @@ async function ingestCommit(workId: string, commit: CommitInfo, chapterFiles: st
     }
 
     const { data, content } = matter(rawFile);
-    const title: string = data.title || filePath.replace('.md', '');
-    const sortOrder: number = data.order ?? 0;
-    const slug = filePath.replace('.md', '');
-    const renderedHtml = marked.parse(content) as string;
-    const lines = content.split('\n');
-    const lineCount = lines.length;
-    const wordCount = countWords(content);
-    const charCount = content.length;
+    const parsed = parseChapter({
+      filePath,
+      slug: filePath.replace('.md', ''),
+      title: data.title || filePath.replace('.md', ''),
+      sortOrder: typeof data.order === 'number' ? data.order : (parseInt(data.order, 10) || 0),
+      rawMarkdown: content,
+      frontmatter: data,
+    });
 
     // Upsert chapter
     const [ch] = await sql`
       INSERT INTO chapters (work_id, slug, title, file_path, sort_order)
-      VALUES (${workId}, ${slug}, ${title}, ${filePath}, ${sortOrder})
+      VALUES (${workId}, ${parsed.slug}, ${parsed.title}, ${parsed.filePath}, ${parsed.sortOrder})
       ON CONFLICT (work_id, file_path) DO UPDATE SET title = EXCLUDED.title, sort_order = EXCLUDED.sort_order
       RETURNING id
     `;
@@ -122,7 +103,7 @@ async function ingestCommit(workId: string, commit: CommitInfo, chapterFiles: st
 
     const [cv] = await sql`
       INSERT INTO chapter_versions (chapter_id, document_version_id, version_number, title, raw_markdown, rendered_html, line_count, word_count, char_count)
-      VALUES (${chapterId}, ${documentVersionId}, ${versionNumber}, ${title}, ${content}, ${renderedHtml}, ${lineCount}, ${wordCount}, ${charCount})
+      VALUES (${chapterId}, ${documentVersionId}, ${versionNumber}, ${parsed.title}, ${parsed.rawMarkdown}, ${parsed.renderedHtml}, ${parsed.lineCount}, ${parsed.wordCount}, ${parsed.charCount})
       ON CONFLICT (chapter_id, document_version_id) DO UPDATE SET title = EXCLUDED.title
       RETURNING id
     `;
@@ -130,14 +111,32 @@ async function ingestCommit(workId: string, commit: CommitInfo, chapterFiles: st
 
     // Lines
     await sql`DELETE FROM chapter_version_lines WHERE chapter_version_id = ${chapterVersionId}`;
-    for (let i = 0; i < lines.length; i++) {
+    for (const line of parsed.lines) {
       await sql`
         INSERT INTO chapter_version_lines (chapter_version_id, line_number, line_text, line_hash, block_type)
-        VALUES (${chapterVersionId}, ${i + 1}, ${lines[i]}, ${lineHash(lines[i])}, ${detectBlockType(lines[i])})
+        VALUES (${chapterVersionId}, ${line.lineNumber}, ${line.lineText}, ${line.lineHash}, ${line.blockType})
       `;
     }
 
-    console.log(`    ✓ ${filePath} v${versionNumber} (${lineCount} lines)`);
+    // Word map: diff rendered text content against previous version
+    const newWords = htmlToWords(parsed.renderedHtml);
+    if (versionNumber > 1) {
+      const [prevVer] = await sql`
+        SELECT id, rendered_html FROM chapter_versions
+        WHERE chapter_id = ${chapterId} AND version_number = ${versionNumber - 1}
+      `;
+      if (prevVer) {
+        const oldWords = htmlToWords(prevVer.rendered_html);
+        const wordMap = buildWordMap(oldWords, newWords);
+        await sql`
+          INSERT INTO chapter_diffs (chapter_version_id, previous_chapter_version_id, word_map)
+          VALUES (${chapterVersionId}, ${prevVer.id}, ${wordMap})
+          ON CONFLICT DO NOTHING
+        `;
+      }
+    }
+
+    console.log(`    ✓ ${filePath} v${versionNumber} (${parsed.lineCount} lines, ${newWords.length} words)`);
   }
 
   return documentVersionId;
@@ -157,32 +156,67 @@ const GROUPS = [
   { name: 'Critique Partners', slug: 'critique-partners',  description: 'Deep editing focus' },
 ];
 
-const COMMENTS_C1: Array<{ startLine: number; endLine: number; body: string; readerIdx: number }> = [
-  { startLine: 1,  endLine: 3,  body: 'The opening hook is wonderful — dropped right into the mythology without exposition. But "shadow" feels abstract; could you give us a small physical detail in the first sentence to anchor the reader?', readerIdx: 1 },
-  { startLine: 5,  endLine: 7,  body: 'I love *skioula*. The intimacy of a nickname this early does so much work. Could we feel more of her physical response here — a held breath, a heat in the cheeks?', readerIdx: 0 },
-  { startLine: 10, endLine: 12, body: 'The kithara detail is perfect. Shows rather than tells his artistry. I kept hearing the music as I read.', readerIdx: 2 },
-  { startLine: 31, endLine: 34, body: 'The father\'s speech is delightful — "Did you eat a bees\' nest?" is a keeper. His joy vs the king\'s coldness works as early foreshadowing.', readerIdx: 0 },
-  { startLine: 44, endLine: 47, body: 'The contrast between King Oeagrus with other children vs. with Orpheus is quietly devastating. I wonder if you could slow down here for one more sentence — let us sit with that look in Orpheus\'s eyes.', readerIdx: 1 },
-  { startLine: 60, endLine: 63, body: 'Her role as observer/listener is established really well. It mirrors Orpheus\'s role as singer — she absorbs, he expresses. This duality is going to pay off beautifully.', readerIdx: 2 },
-];
-
-const COMMENTS_C2: Array<{ startLine: number; endLine: number; body: string; readerIdx: number }> = [
-  { startLine: 1,  endLine: 4,  body: 'Olyxena\'s introduction is immediately warm and specific. The contrast with Eurydice set up on the next page is effective.', readerIdx: 0 },
-  { startLine: 15, endLine: 18, body: 'The "wood-god father" rumor is tantalizing. I want just slightly more — a detail that makes us believe it before we dismiss it.', readerIdx: 1 },
-  { startLine: 22, endLine: 25, body: 'The smell description (crushed stems, darkened pools) is excellent. Very sensory. Sets Eurydice apart without othering her clumsily.', readerIdx: 2 },
-];
-
-const EDITS_C1: Array<{ startLine: number; endLine: number; original: string; suggested: string; rationale: string; readerIdx: number }> = [
+// selectedText must match the rendered text content verbatim (markdown syntax stripped).
+const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number }> = [
   {
-    startLine: 3, endLine: 3,
-    original: 'But loyalty is rarely that simple.',
-    suggested: 'But a shadow\'s loyalty is rarely that simple.',
+    selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
+    body: 'The opening hook is wonderful — dropped right into the mythology without exposition. But "shadow" feels abstract; could you give us a small physical detail in the first sentence to anchor the reader?',
+    readerIdx: 1,
+  },
+  {
+    selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.',
+    body: 'I love *skioula*. The intimacy of a nickname this early does so much work. Could we feel more of her physical response here — a held breath, a heat in the cheeks?',
+    readerIdx: 0,
+  },
+  {
+    selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.',
+    body: 'The kithara detail is perfect. Shows rather than tells his artistry. I kept hearing the music as I read.',
+    readerIdx: 2,
+  },
+  {
+    selectedText: 'Did you eat a bees\' nest? Is this belly filled with cleverness and honey?',
+    body: 'The father\'s speech is delightful — "Did you eat a bees\' nest?" is a keeper. His joy vs the king\'s coldness works as early foreshadowing.',
+    readerIdx: 0,
+  },
+  {
+    selectedText: 'The look in her beloved prince\'s eyes as they spoke — half yearning to please, half hopeless — made her want to hate the king, but she could not.',
+    body: 'The contrast between King Oeagrus with other children vs. with Orpheus is quietly devastating. I wonder if you could slow down here for one more sentence — let us sit with that look in Orpheus\'s eyes.',
+    readerIdx: 1,
+  },
+  {
+    selectedText: 'always, always Hesypera listened, and in this way learned many things.',
+    body: 'Her role as observer/listener is established really well. It mirrors Orpheus\'s role as singer — she absorbs, he expresses. This duality is going to pay off beautifully.',
+    readerIdx: 2,
+  },
+];
+
+const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number }> = [
+  {
+    selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.',
+    body: 'Olyxena\'s introduction is immediately warm and specific. The contrast with Eurydice set up on the next page is effective.',
+    readerIdx: 0,
+  },
+  {
+    selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.',
+    body: 'The "wood-god father" rumor is tantalizing. I want just slightly more — a detail that makes us believe it before we dismiss it.',
+    readerIdx: 1,
+  },
+  {
+    selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools',
+    body: 'The smell description (crushed stems, darkened pools) is excellent. Very sensory. Sets Eurydice apart without othering her clumsily.',
+    readerIdx: 2,
+  },
+];
+
+const EDITS_C1: Array<{ original: string; suggested: string; rationale: string; readerIdx: number }> = [
+  {
+    original: 'But loyalty is rarely that easy.',
+    suggested: 'But a shadow\'s loyalty is rarely that easy.',
     rationale: 'The antecedent for "loyalty" is slightly ambiguous after the general statement. Tying it back to "shadow" tightens the logic.',
     readerIdx: 1,
   },
   {
-    startLine: 8, endLine: 8,
-    original: 'His bare foot beat out a rhythm against the wall',
+    original: 'One bare foot beat out a rhythm against the wall',
     suggested: 'One bare foot beat time against the stone wall',
     rationale: '"beat time" sounds more musical; "stone wall" gives a texture that matches the palace setting.',
     readerIdx: 1,
@@ -431,27 +465,25 @@ async function main() {
       totalReactions += c1Reactions.length;
 
       const [c1Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c1Id}`;
-      const c1Lines = await sql`SELECT line_number, line_text FROM chapter_version_lines WHERE chapter_version_id = ${c1Id} ORDER BY line_number`;
 
       for (const c of COMMENTS_C1) {
         const ri = c.readerIdx;
-        const rangeLines = (c1Lines as Array<{ line_number: number; line_text: string }>)
-          .filter(l => l.line_number >= c.startLine && l.line_number <= c.endLine && l.line_text.trim() !== '');
-        const selectedText = rangeLines.map(l => l.line_text).join(' ');
-        const pos = selectedText ? feedbackCharPos(c1Ver.rendered_html, selectedText) : null;
+        const wp = feedbackWordPos(c1Ver.rendered_html, c.selectedText);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
         await sql`
-          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, selected_text, body, char_start, char_length)
-          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${selectedText || null}, ${c.body}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
+          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, selected_text, body, char_start, char_length, word_start, word_end)
+          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.selectedText}, ${c.body}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
       totalComments += COMMENTS_C1.length;
 
       for (const e of EDITS_C1) {
         const ri = e.readerIdx;
-        const pos = feedbackCharPos(c1Ver.rendered_html, e.original);
+        const wp = feedbackWordPos(c1Ver.rendered_html, e.original);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
         await sql`
-          INSERT INTO suggested_edits (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, original_text, suggested_text, rationale, char_start, char_length)
-          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : null}, ${inviteIds[ri]}, ${e.startLine}, ${e.endLine}, ${e.original}, ${e.suggested}, ${e.rationale}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
+          INSERT INTO suggested_edits (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, original_text, suggested_text, rationale, char_start, char_length, word_start, word_end)
+          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : null}, ${inviteIds[ri]}, ${e.original}, ${e.suggested}, ${e.rationale}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
       totalEdits += EDITS_C1.length;
@@ -487,17 +519,14 @@ async function main() {
       totalReactions += c2Reactions.length;
 
       const [c2Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c2Id}`;
-      const c2Lines = await sql`SELECT line_number, line_text FROM chapter_version_lines WHERE chapter_version_id = ${c2Id} ORDER BY line_number`;
 
       for (const c of COMMENTS_C2) {
         const ri = c.readerIdx;
-        const rangeLines = (c2Lines as Array<{ line_number: number; line_text: string }>)
-          .filter(l => l.line_number >= c.startLine && l.line_number <= c.endLine && l.line_text.trim() !== '');
-        const selectedText = rangeLines.map(l => l.line_text).join(' ');
-        const pos = selectedText ? feedbackCharPos(c2Ver.rendered_html, selectedText) : null;
+        const wp = feedbackWordPos(c2Ver.rendered_html, c.selectedText);
+        const cp = wp ? wordRangeToCharPos(c2Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
         await sql`
-          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, selected_text, body, char_start, char_length)
-          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.startLine}, ${c.endLine}, ${selectedText || null}, ${c.body}, ${pos?.charStart ?? null}, ${pos?.charLength ?? null})
+          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, selected_text, body, char_start, char_length, word_start, word_end)
+          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.selectedText}, ${c.body}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
       totalComments += COMMENTS_C2.length;

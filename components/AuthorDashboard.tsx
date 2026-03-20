@@ -387,11 +387,11 @@ interface HeatmapLine {
 
 interface DashComment {
   id: string;
-  start_line: number;
-  end_line: number;
   body: string;
   char_start: number | null;
   char_length: number | null;
+  word_start: number | null;
+  word_end: number | null;
   created_at: string;
   reader_name: string | null;
   reader_slug: string | null;
@@ -399,13 +399,13 @@ interface DashComment {
 
 interface DashSuggestion {
   id: string;
-  start_line: number;
-  end_line: number;
   original_text: string;
   suggested_text: string;
   rationale: string | null;
   char_start: number | null;
   char_length: number | null;
+  word_start: number | null;
+  word_end: number | null;
   created_at: string;
   reader_name: string | null;
 }
@@ -657,7 +657,6 @@ export default function AuthorDashboard() {
                             chapterHtml={chapterHtml}
                             comments={dashComments}
                             suggestions={dashSuggestions}
-                            heatmapLines={heatmapLines}
                           />
                         )}
                       </ContentTransition>

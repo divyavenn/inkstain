@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import ChapterText from './ChapterText';
-import { HeatmapLine } from './LikesHeatmapView';
+
 
 const Container = styled.div`
   display: grid;
@@ -137,10 +137,6 @@ const ReaderBadge = styled.span`
   letter-spacing: 0.02em;
 `;
 
-const LineBadge = styled.span`
-  font-size: 0.65rem;
-  color: rgba(26,26,24,0.28);
-`;
 
 const EmptyState = styled.div`
   text-align: center;
@@ -152,11 +148,11 @@ const EmptyState = styled.div`
 
 export interface DashComment {
   id: string;
-  start_line: number;
-  end_line: number;
   body: string;
   char_start: number | null;
   char_length: number | null;
+  word_start: number | null;
+  word_end: number | null;
   created_at: string;
   reader_name: string | null;
   reader_slug: string | null;
@@ -164,13 +160,13 @@ export interface DashComment {
 
 export interface DashSuggestion {
   id: string;
-  start_line: number;
-  end_line: number;
   original_text: string;
   suggested_text: string;
   rationale: string | null;
   char_start: number | null;
   char_length: number | null;
+  word_start: number | null;
+  word_end: number | null;
   created_at: string;
   reader_name: string | null;
 }
@@ -183,46 +179,56 @@ interface CommentsViewProps {
   chapterHtml: string;
   comments: DashComment[];
   suggestions: DashSuggestion[];
-  heatmapLines: HeatmapLine[];
 }
 
+// Wrap every DOM text node that overlaps with [charIdx, charIdx+length).
+// Unlike the old single-node version, this handles selections that span
+// across paragraph boundaries (multiple text nodes).
 function charWrap(
   div: HTMLElement,
   charIdx: number,
   length: number,
   makeEl: () => HTMLElement,
 ): void {
+  const selEnd = charIdx + length;
   let charPos = 0;
-  const walk = (node: Node): boolean => {
+
+  const walk = (node: Node): void => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent || '';
-      const start = charIdx - charPos;
-      const end = start + length;
-      if (start >= 0 && end <= text.length) {
+      const nodeEnd = charPos + text.length;
+      const overlapStart = Math.max(charPos, charIdx);
+      const overlapEnd = Math.min(nodeEnd, selEnd);
+
+      // Skip wrapping whitespace-only nodes (e.g. the \n between </p> and <p>)
+      // — wrapping them creates visible blank lines without adding any highlight.
+      if (overlapStart < overlapEnd && text.slice(overlapStart - charPos, overlapEnd - charPos).trim() !== '') {
+        const localStart = overlapStart - charPos;
+        const localEnd = overlapEnd - charPos;
         const el = makeEl();
-        el.textContent = text.slice(start, end);
-        const before = document.createTextNode(text.slice(0, start));
-        const after = document.createTextNode(text.slice(end));
+        el.textContent = text.slice(localStart, localEnd);
+        const before = document.createTextNode(text.slice(0, localStart));
+        const after = document.createTextNode(text.slice(localEnd));
         node.parentNode?.insertBefore(before, node);
         node.parentNode?.insertBefore(el, node);
         node.parentNode?.insertBefore(after, node);
         node.parentNode?.removeChild(node);
-        return true;
       }
+
       charPos += text.length;
     } else {
       for (const child of Array.from(node.childNodes)) {
-        if (walk(child)) return true;
+        walk(child);
       }
     }
-    return false;
   };
+
   walk(div);
 }
 
+
 function processHtml(
   html: string,
-  contentLines: HeatmapLine[],
   comments: DashComment[],
   suggestions: DashSuggestion[],
   hoveredPanelId: string | null,
@@ -233,38 +239,22 @@ function processHtml(
   if (typeof window === 'undefined') return html;
   const div = document.createElement('div');
   div.innerHTML = html;
-  const fullText = div.textContent || '';
 
   const [r, g, b] = [255, 225, 0];
   const gradient = (op: number) =>
     `linear-gradient(to right, rgba(${r},${g},${b},${(op * 0.14).toFixed(2)}), rgba(${r},${g},${b},${op.toFixed(2)}) 4%, rgba(${r},${g},${b},${(op * 0.43).toFixed(2)}))`;
 
-  // Group comments by unique line range, wrap each range once
-  const grouped = new Map<string, string[]>(); // "start-end" → comment ids
+  // Group comments by their exact char position so each unique text range gets its own highlight
+  const grouped = new Map<string, string[]>(); // "charStart-charLength" → comment ids
   for (const c of comments) {
-    const key = `${c.start_line}-${c.end_line}`;
+    if (c.char_start == null || c.char_length == null) continue;
+    const key = `${c.char_start}-${c.char_length}`;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(c.id);
   }
 
   for (const [key, ids] of grouped) {
-    const [startLine, endLine] = key.split('-').map(Number);
-
-    // Use stored char_start if available; otherwise fall back to indexOf
-    const representative = comments.find(c => c.start_line === startLine && c.end_line === endLine);
-    let charIdx: number;
-    let searchLength: number;
-    if (representative?.char_start != null && representative?.char_length != null) {
-      charIdx = representative.char_start;
-      searchLength = representative.char_length;
-    } else {
-      const rangeLines = contentLines.filter(l => l.lineNumber >= startLine && l.lineNumber <= endLine);
-      if (rangeLines.length === 0) continue;
-      const searchText = rangeLines.map(l => l.lineText).join(' ');
-      charIdx = fullText.indexOf(searchText);
-      if (charIdx === -1) continue;
-      searchLength = searchText.length;
-    }
+    const [charIdx, searchLength] = key.split('-').map(Number);
 
     // Opacity: panel hover dims all except the hovered item's mark;
     // text hover/pin dims all except the active mark
@@ -294,8 +284,14 @@ function processHtml(
   if (previewSuggId !== null) {
     const s = suggestions.find(s => s.id === previewSuggId);
     if (s?.original_text) {
-      const idx = s.char_start ?? (div.textContent || '').indexOf(s.original_text);
-      const len = s.char_length ?? s.original_text.length;
+      let idx = -1;
+      let len = 0;
+      if (s.char_start != null && s.char_length != null) {
+        idx = s.char_start; len = s.char_length;
+      } else {
+        idx = (div.textContent || '').indexOf(s.original_text);
+        len = s.original_text.length;
+      }
       if (idx !== -1) {
         charWrap(div, idx, len, () => {
           const span = document.createElement('span');
@@ -310,24 +306,19 @@ function processHtml(
   return div.innerHTML;
 }
 
-export default function CommentsView({ chapterHtml, comments, suggestions, heatmapLines }: CommentsViewProps) {
+export default function CommentsView({ chapterHtml, comments, suggestions }: CommentsViewProps) {
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
   const textPanelRef = useRef<HTMLDivElement>(null);
   const [hoveredMarkIds, setHoveredMarkIds] = useState<string[]>([]);
   const [pinnedItemIds, setPinnedItemIds] = useState<string[] | null>(null);
   const [previewSuggId, setPreviewSuggId] = useState<string | null>(null);
 
-  const contentLines = useMemo(
-    () => heatmapLines.filter(l => l.lineText.trim() !== ''),
-    [heatmapLines],
-  );
-
   const items: Item[] = useMemo(() => {
     const all: Item[] = [
       ...comments.map(c => ({ kind: 'comment' as const, data: c })),
       ...suggestions.map(s => ({ kind: 'suggestion' as const, data: s })),
     ];
-    return all.sort((a, b) => a.data.start_line - b.data.start_line);
+    return all.sort((a, b) => (a.data.char_start ?? Infinity) - (b.data.char_start ?? Infinity));
   }, [comments, suggestions]);
 
   // Filter panel to the mark under cursor / pinned mark (pinned takes priority)
@@ -348,8 +339,8 @@ export default function CommentsView({ chapterHtml, comments, suggestions, heatm
   }, [hoveredPanelId]);
 
   const processedHtml = useMemo(
-    () => processHtml(chapterHtml, contentLines, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId),
-    [chapterHtml, contentLines, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId],
+    () => processHtml(chapterHtml, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId),
+    [chapterHtml, comments, suggestions, hoveredPanelId, hoveredMarkIds, pinnedItemIds, previewSuggId],
   );
 
   const handleTextMouseOver = (e: React.MouseEvent) => {
@@ -408,7 +399,6 @@ export default function CommentsView({ chapterHtml, comments, suggestions, heatm
               const id = item.data.id;
               const isHovered = hoveredPanelId === id;
               const readerName = item.data.reader_name;
-              const line = `L${item.data.start_line}${item.data.end_line !== item.data.start_line ? `–${item.data.end_line}` : ''}`;
 
               return (
                 <CommentCard
@@ -440,10 +430,7 @@ export default function CommentsView({ chapterHtml, comments, suggestions, heatm
                   )}
                   <CommentMeta>
                     <ReaderBadge>{readerName || 'Anonymous'}</ReaderBadge>
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <LineBadge>{line}</LineBadge>
-                      <span>{new Date(item.data.created_at).toLocaleDateString()}</span>
-                    </div>
+                    <span>{new Date(item.data.created_at).toLocaleDateString()}</span>
                   </CommentMeta>
                 </CommentCard>
               );

@@ -29,7 +29,7 @@ She sung it shyly and his hands magically plucked out the accompaniment. Later h
 
 “How can someone *this* tiny be *this* bold, Hesypera? Did you eat a bees’ nest? Is this belly filled with cleverness and honey?” her father roared, tickling her with his whiskers as she giggled and thrashed in his grasp. “It was well done. It is very good for girls to learn music, and better still to befriend the son of the king.”
 
-Hesypera took up crouching like a mouse near whatever room the prince was in. People smiled when they saw the small girl sitting quietly in the corner, so totally absorbed in the small tasks her mother gave her. But more often they didn’t notice her at all, or forgot quickly that she was there. And yet always, always Hesypera listened, and in this way learned many things. 
+Hesypera took up crouching like a mouse near whatever room the prince was in. Even if people noticed her they forgot quickly that she was there. She learned the trick of listening while seeming like she wasn't, and in this way learned many things. 
 
 She knew the king of the Eidonians never called his son *little one,* or *dearest*, or *my child.* He addressed him formally, name and title. The look in her beloved prince’s eyes as they spoke — half yearning to please, half hopeless — made her want to hate the king, but she could not. All children in the palace ran up to King Oeagrus fearlessly to be swung up on his knee and leave sticky with sweets. The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old. 
 
@@ -59,13 +59,11 @@ At eleven years old Hesypera was already beginning to be beautiful. She had skin
 
 She imagined herself at sixteen, robed in white, emerging newly anointed from the temple of Bendis. Framed by a delicate veil, her face (slimmer and paler and starrier-eyed than it was now) would glow with mystery and secret knowledge. People would part before her like they did now before her mother, and the king himself would consult her in matters of omen and sacrifice.
 
-And the prince would look at her and not be able to stop looking, amazed that his little skioula was so beautiful and grave and admired. He would write aching songs about her in secret and finally he would ask her father for her hand.
+And the prince would not be able to stop looking at her, amazed that his little skioula was so beautiful and grave and admired. He would write aching songs about her in secret and one day ask her father for her hand.
 
 The king, she knew, would be pleased with the match. Her father was no small lord but an archon, powerful and trusted by the king, and her mother was Hellenic by birth, high priestess of the temple of Bendis. It would be a union gods and men would smile on.
 
-And perhaps Apollo himself would come and tell his son he had chosen well, and Calliope and her sister Muses would bless their wedding. She would bear him many children and at the end of their lives they would ascend to the stars together, like mortal Castor and his divine twin Pollux.
-
-Upon Castor’s death the gods, touched by their devotion to each other, entwined them forever in the skies. It had happened before and there was no reason it would not be their fate too, especially because Bendis would surely vouch for her.
+The wedding would be the greatest the tribe had ever seen. Perhaps Apollo himself would come, and tell his son he had chosen well. She would bear him many children and at the end of their lives they would ascend to the stars together, like mortal Castor and his divine twin Pollux.
 
 When she was old she would remember these first ten years with an ache. Her father’s metal drinking horn, burnished and slightly dented. Her mother’s scent of blood and flowers and flame. Her bare feet licking the stone floors of the palace as she ran giggling with the other children. Her dim silver needle slipping in and out of taut cloth. The coolness of the river Hebrus on hot, sticky afternoons, easily washing away her childish hurts and tiredness.
 

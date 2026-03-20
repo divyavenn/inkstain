@@ -11,11 +11,11 @@ They whispered that her father was a wood-god, a servant of Pan, that there was 
 
 She was glad that there was no talk of Eurydice joining the cult of Bendis. Eurydice woke up as early or late as she pleased. She disappeared for entire days to wander the woods like a peasant. She climbed trees and played with the goatherds and her hair was always a mess. She even put grubs in her pockets to sneak as treats to the sacred owls, whose ritual feeding was an honor Hesypera had won with many years of diligent effort.
 
-It annoyed Hesypera that the owls warbled when they saw Eurydice and rubbed their heads against her hands. The priestesses laughed at her insolence even as they criticized her constantly. Hesypera sat at her loom with perfect dignity watching the tips of their fingers slip in and out of her curls, braiding flowers in her hair.
+It annoyed Hesypera that the owls warbled when they saw Eurydice and rubbed their heads against her hands. The priestesses laughed at her insolence even as they criticized her constantly. Hesypera sat at her loom with perfect dignity watching them braid flowers in her hair as they scolded her for her pranks.
 
-Orpheus was the worst. Wherever they went, he invited her. He showed her all their secret spots and hiding places. He offered her everything from his woolen tunic if she was cold to his kithara if she wanted to practice. Hesypera told herself it was because her prince was kind and gentle. Eurydice was his cousin, if not exactly by blood, and if rumors were true she and her mother had fled to King Oeagrus for refuge.
+Orpheus was the worst. He showed her all their secret spots and hiding places. He offered her everything from his woolen tunic if she was cold to his kithara if she wanted to practice. Hesypera told herself it was because her prince was kind and gentle. Eurydice was his cousin, if not exactly by blood, and if rumors were true she and her mother had fled to King Oeagrus for refuge.
 
-One day she could take it no longer. They were sitting together on the stone steps outside the palace enjoying the fickle winter sun, the prince tuning his kithara, Hesypera mending a hole in her father’s robes.
+Wherever they went, he invited her. One day they were sitting together on the stone steps outside the palace enjoying the fickle winter sun, the prince tuning his kithara, Hesypera mending a hole in her father’s robes.
 
 “Shall we take a boat out onto the river tonight?” Hesypera suggested.
 
@@ -23,25 +23,28 @@ One day she could take it no longer. They were sitting together on the stone ste
 
 “Yes,” she said, her heart catching at his gaze.
 
-“Then we will. I’ll tell the servants to prepare the boats and the cooks to pack us honey cakes, and figs, and some olives, and fresh water and wine….”
+“Then we will. I’ll tell the servants to prepare the boats and the cooks to pack us honey cakes..."
 
-Hesyperia loved how he always went out of his way to fulfill her little wishes, made her feel like a princess herself.
+"And figs!"
 
-“…and I’ll find Eurydice and tell her.” All of a sudden her throat soured.
+"And olives!"
+
+"And dates!"
+
+“I’ll find Eurydice and tell her.” 
 
 “Why?” she said, trying to keep her voice even.
 
-“Why not? She’d like it. The moon will be beautiful on the river and she always says how much nicer moonlight is than sunlight.”
+“She’d like it. The moon will be beautiful on the river and she always says how much nicer moonlight is than sunlight.” Hesypera's throat went sour.
 
-“We always do things with her.”
+“Do you not like Eurydice?” 
 
-“Do you not like Eurydice?” Orpheus asked, his brow furrowing. At the trouble in his voice Hesypera softened.
+“No, of course I do. Only we used to spend so much time together and now we never do.”
 
-“No, of course I do. Only we used to spend so much time together, just you and me, and now we never do.”
+Orpheus grinned. "We're together right now. A man couldn't get away from his shadow even if he wanted to. And I'd never want to."
 
-“We’re together right now,” Orpheus laughed.
 
-“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars, where there was no one to watch them and nowhere to look but his eyes. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
+“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars, where there was no one to watch them. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
 
 The words choked her, so instead she straightened her back, smoothed her hair, smiled demurely, and said in her gentlest, noblest voice, “I’d love it if she came.”
 
@@ -69,11 +72,11 @@ Eurydice laughed and looked at Hesypera, her eyes suddenly sparkling. “I don�
 
 Hesypera could not help it; her eyes flickered to Orpheus. He sat on the far edge of the boat, half shrouded in darkness. His fingers still moved skillfully over the strings of the kithara, but his mind was clearly elsewhere. He was staring at her with an intensity she had never seen. And suddenly the hard knot in her chest loosened and she was ready to befriend anybody.
 
-“You’re ungrateful,” she said, secretly thrilling at her bluntness. “You are surrounded by people who wish you well and want to teach you to become a young lady your family would be proud of, but you spend your time running around the forest. And you don’t help with the work.”
+“You’re ungrateful,” she said, secretly thrilling at her bluntness. “You are surrounded by people who wish you well and try to teach you things you need to know, but you laugh at them and spend your time running around the forest. And you don’t help with the work.”
 
 “All right. What should I do?”
 
-“Take lessons like we other girls do. Learn history and musi…weaving with us. Help prepare meals and fetch water and weave and mend. And stop feeding my owls!”
+"Help us prepare meals and fetch water and weave and mend. And stop feeding my owls.”
 
 Eurydice tilted her head and considered this. “I did not see that it was ungrateful. I never did these things in my father’s court.”
 
@@ -95,7 +98,7 @@ Hesypera found her voice again.
 
 “So are you….”
 
-“The daughter of a wood god? I don’t think so.” She stared across the river moodily before adding, “I’m just a girl like you.” Hesypera delicately held back a snort.
+“The daughter of a wood god? I don’t think so.” She stared across the river before adding, “I’m just a girl like you.” Hesypera delicately held back a snort.
 
 “I could believe it,” Orpheus said quietly, and resumed playing, a harmony filled with darkness and grief.
 
@@ -105,7 +108,7 @@ Hesypera found her voice again.
 
 “And they believed it?”
 
-“After he died, we didn’t stay around to find out. They believed her once.”
+“We didn’t stay around to find out.”
 
 Hesypera thought of the Lady Oelyxena, laughing and good natured, the way the youth seemed sapped from her face even though she wasn’t that old. Hesypera, with her childhood habit of moving quietly in the dark, had seen the sudden tears Olyxena wept sometimes, the weariness of her movements when she thought she was alone.
 

@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS chapter_diffs (
   added_lines int NOT NULL DEFAULT 0,
   removed_lines int NOT NULL DEFAULT 0,
   changed_lines int NOT NULL DEFAULT 0,
-  diff_json jsonb NOT NULL
+  diff_json jsonb,
+  word_map int[]
 );
 
 CREATE TABLE IF NOT EXISTS reader_profiles (
@@ -182,12 +183,12 @@ CREATE TABLE IF NOT EXISTS feedback_comments (
   reader_profile_id uuid REFERENCES reader_profiles(id),
   reader_group_id uuid REFERENCES reader_groups(id),
   reader_invite_id uuid REFERENCES reader_invites(id),
-  start_line int NOT NULL,
-  end_line int NOT NULL,
   selected_text text,
   body text NOT NULL,
   char_start int,
   char_length int,
+  word_start int,
+  word_end int,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -200,17 +201,23 @@ CREATE TABLE IF NOT EXISTS suggested_edits (
   reader_profile_id uuid REFERENCES reader_profiles(id),
   reader_group_id uuid REFERENCES reader_groups(id),
   reader_invite_id uuid REFERENCES reader_invites(id),
-  start_line int NOT NULL,
-  end_line int NOT NULL,
   original_text text NOT NULL,
   suggested_text text NOT NULL,
   rationale text,
   char_start int,
   char_length int,
+  word_start int,
+  word_end int,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_suggested_edits_chapter_version ON suggested_edits(chapter_version_id);
+
+-- Drop deprecated line-number columns from feedback tables (word/char anchoring replaces them)
+ALTER TABLE feedback_comments DROP COLUMN IF EXISTS start_line;
+ALTER TABLE feedback_comments DROP COLUMN IF EXISTS end_line;
+ALTER TABLE suggested_edits DROP COLUMN IF EXISTS start_line;
+ALTER TABLE suggested_edits DROP COLUMN IF EXISTS end_line;
 
 CREATE TABLE IF NOT EXISTS interest_signups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

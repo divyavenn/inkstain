@@ -14,18 +14,18 @@ export async function GET(request: NextRequest) {
 
     if (chapterVersionId) {
       const comments = await sql`
-        SELECT fc.id, fc.start_line, fc.end_line, fc.body as comment, fc.created_at,
+        SELECT fc.id, fc.body as comment, fc.created_at,
                rp.display_name as reader_name
         FROM feedback_comments fc
         LEFT JOIN reader_profiles rp ON rp.id = fc.reader_profile_id
         WHERE fc.chapter_version_id = ${chapterVersionId}
-        ORDER BY fc.start_line, fc.created_at
+        ORDER BY fc.char_start NULLS LAST, fc.created_at
       `;
       return NextResponse.json({ feedback: comments });
     }
 
     const comments = await sql`
-      SELECT fc.id, fc.start_line, fc.end_line, fc.body as comment, fc.created_at,
+      SELECT fc.id, fc.body as comment, fc.created_at,
              rp.display_name as reader_name, c.title as chapter_title
       FROM feedback_comments fc
       LEFT JOIN reader_profiles rp ON rp.id = fc.reader_profile_id

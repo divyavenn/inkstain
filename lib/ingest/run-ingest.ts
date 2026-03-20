@@ -3,6 +3,7 @@ import { CREATE_SCHEMA_SQL } from '../db/schema';
 import { loadAllMarkdownChapters } from '../content/load-markdown';
 import { parseChapter } from './parse-chapter';
 import { diffChapterVersions } from './diff-chapter';
+import { htmlToWords, buildWordMap } from '../db/wordPos';
 import simpleGit from 'simple-git';
 
 export interface IngestResult {
@@ -171,26 +172,33 @@ export async function runIngest(): Promise<IngestResult> {
       `;
     }
 
-    // Compute and store diff
+    // Compute and store diff + word map
     if (prevSha) {
       const diffResult = await diffChapterVersions(parsed.filePath, prevSha, commitInfo.sha);
 
       // Find previous chapter version
       const prevChapterVersions = await sql`
-        SELECT cv.id FROM chapter_versions cv
+        SELECT cv.id, cv.rendered_html FROM chapter_versions cv
         JOIN document_versions dv ON dv.id = cv.document_version_id
         WHERE cv.chapter_id = ${chapterId} AND dv.commit_sha = ${prevSha}
       `;
-      const prevChapterVersionId = prevChapterVersions[0]?.id as string | null;
+      const prevChapterVersion = prevChapterVersions[0] ?? null;
+      const prevChapterVersionId = prevChapterVersion?.id as string | null;
+
+      // Word-level alignment map (new index → old index, -1 if new)
+      const newWords = htmlToWords(parsed.renderedHtml);
+      const wordMap = prevChapterVersion
+        ? buildWordMap(htmlToWords(prevChapterVersion.rendered_html as string), newWords)
+        : null;
 
       await sql`
         INSERT INTO chapter_diffs (
           chapter_version_id, previous_chapter_version_id,
-          added_lines, removed_lines, changed_lines, diff_json
+          added_lines, removed_lines, changed_lines, diff_json, word_map
         ) VALUES (
           ${chapterVersionId}, ${prevChapterVersionId ?? null},
           ${diffResult.addedLines}, ${diffResult.removedLines}, ${diffResult.changedLines},
-          ${JSON.stringify(diffResult.diffJson)}
+          ${JSON.stringify(diffResult.diffJson)}, ${wordMap}
         )
         ON CONFLICT DO NOTHING
       `;
