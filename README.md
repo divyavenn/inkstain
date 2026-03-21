@@ -1,4 +1,4 @@
-# 📚 BookBeta
+# 📚 Inklink
 
 A minimal, open-source platform for collecting feedback on your writing. Perfect for authors seeking beta reader insights with A/B testing capabilities.
 
