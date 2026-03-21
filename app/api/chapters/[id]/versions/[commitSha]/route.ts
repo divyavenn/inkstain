@@ -15,6 +15,7 @@ export async function GET(
       JOIN chapters c ON c.id = cv.chapter_id
       JOIN document_versions dv ON dv.id = cv.document_version_id
       WHERE (c.id = ${id} OR c.slug = ${id}) AND dv.commit_sha = ${commitSha}
+      ORDER BY dv.deployed_at DESC
       LIMIT 1
     `;
 

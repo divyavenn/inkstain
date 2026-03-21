@@ -15,7 +15,7 @@ It annoyed Hesypera that the owls warbled when they saw Eurydice and rubbed thei
 
 Orpheus was the worst. He showed her all their secret spots and hiding places. He offered her everything from his woolen tunic if she was cold to his kithara if she wanted to practice. Hesypera told herself it was because her prince was kind and gentle. Eurydice was his cousin, if not exactly by blood, and if rumors were true she and her mother had fled to King Oeagrus for refuge.
 
-Wherever they went, he invited her. One day they were sitting together on the stone steps outside the palace enjoying the fickle winter sun, the prince tuning his kithara, Hesypera mending a hole in her father’s robes.
+Wherever they went, he invited her. One day they were sitting together on the stone steps outside the palace enjoying the fickle winter sun, the prince tuning his kithara, Hesypera mending a hole in her father’s tunic.
 
 “Shall we take a boat out onto the river tonight?” Hesypera suggested.
 
@@ -31,7 +31,7 @@ Wherever they went, he invited her. One day they were sitting together on the st
 
 "And dates!"
 
-“I’ll find Eurydice and tell her.” 
+“I can't wait," he said, and they grinned conspiratorially at each other. "I’ll find Eurydice and tell her." 
 
 “Why?” she said, trying to keep her voice even.
 
@@ -41,10 +41,10 @@ Wherever they went, he invited her. One day they were sitting together on the st
 
 “No, of course I do. Only we used to spend so much time together and now we never do.”
 
-Orpheus grinned. "We're together right now. A man couldn't get away from his shadow even if he wanted to. And I'd never want to."
+Orpheus laughed. "We're together right now. A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to."
 
 
-“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars, where there was no one to watch them. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
+“Yes, but I mean…” What *did* she mean? She didn’t want to sit with him in the courtyard, surrounded by servants and the occasional errant hen. She wanted him in the shadows, under the stars. She wanted to brush her lips against his perfect shoulder, to run her fingers through his silken gold hair, to tie them together…somehow…forever.
 
 The words choked her, so instead she straightened her back, smoothed her hair, smiled demurely, and said in her gentlest, noblest voice, “I’d love it if she came.”
 

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const readerInviteId = searchParams.get('readerInviteId');
 
   const comments = await sql`
-    SELECT fc.id, fc.body, fc.char_start, fc.char_length, fc.word_start, fc.word_end, fc.created_at,
+    SELECT fc.id, fc.body, fc.selected_text, fc.char_start, fc.char_length, fc.word_start, fc.word_end, fc.created_at,
       rp.display_name as reader_name, rp.slug as reader_slug,
       rg.name as group_name, rg.slug as group_slug
     FROM feedback_comments fc

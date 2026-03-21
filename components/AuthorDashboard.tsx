@@ -113,7 +113,6 @@ const ActiveTabLabel = styled.span`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  margin-top: -8px; /* nudge up from shoulder region */
   white-space: nowrap;
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.75rem;
@@ -388,6 +387,7 @@ interface HeatmapLine {
 interface DashComment {
   id: string;
   body: string;
+  selected_text: string | null;
   char_start: number | null;
   char_length: number | null;
   word_start: number | null;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
 import { isDashboardAuthed } from '@/lib/auth/dashboard';
+import { htmlToWords } from '@/lib/db/wordPos';
+import { renderMarkdown } from '@/lib/content/render-markdown';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!await isDashboardAuthed(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,16 +40,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const reactions = await reactionsQuery;
   console.log(`[heatmap] chapterVersionId=${chapterVersionId} reactions=${reactions.length} lines=${lines.length}`);
 
-  // Get comments per line
+  // Get comments per word range
   const comments = await sql`
-    SELECT start_line, end_line, COUNT(*) as cnt
+    SELECT word_start, word_end, COUNT(*) as cnt
     FROM feedback_comments
     WHERE chapter_version_id = ${chapterVersionId}
+    AND word_start IS NOT NULL AND word_end IS NOT NULL
     ${readerProfileId ? sql`AND reader_profile_id = ${readerProfileId}` : sql``}
     ${readerGroupId ? sql`AND reader_group_id = ${readerGroupId}` : sql``}
     ${readerInviteId ? sql`AND reader_invite_id = ${readerInviteId}` : sql``}
-    GROUP BY start_line, end_line
+    GROUP BY word_start, word_end
   `;
+
+  // Build word-index → line-number mapping by rendering each markdown line
+  // and counting its words cumulatively.
+  const wordToLine: number[] = [];
+  for (const line of lines) {
+    const lineWords = htmlToWords(renderMarkdown(line.line_text as string));
+    for (let w = 0; w < lineWords.length; w++) {
+      wordToLine.push(line.line_number as number);
+    }
+  }
 
   // Get max line seen per reader for retention
   const retention = await sql`
@@ -77,8 +90,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const commentMap: Record<number, number> = {};
   for (const c of comments) {
-    for (let i = Number(c.start_line); i <= Number(c.end_line); i++) {
-      commentMap[i] = (commentMap[i] || 0) + Number(c.cnt);
+    const seenLines = new Set<number>();
+    for (let wi = Number(c.word_start); wi <= Number(c.word_end); wi++) {
+      const ln = wordToLine[wi];
+      if (ln !== undefined && !seenLines.has(ln)) {
+        seenLines.add(ln);
+        commentMap[ln] = (commentMap[ln] || 0) + Number(c.cnt);
+      }
     }
   }
 

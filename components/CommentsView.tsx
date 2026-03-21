@@ -149,6 +149,7 @@ const EmptyState = styled.div`
 export interface DashComment {
   id: string;
   body: string;
+  selected_text: string | null;
   char_start: number | null;
   char_length: number | null;
   word_start: number | null;
@@ -426,7 +427,12 @@ export default function CommentsView({ chapterHtml, comments, suggestions }: Com
                       )}
                     </>
                   ) : (
-                    <CommentBody>{(item.data as DashComment).body}</CommentBody>
+                    <>
+                      {(item.data as DashComment).selected_text && (
+                        <SnippetText>"{(item.data as DashComment).selected_text}"</SnippetText>
+                      )}
+                      <CommentBody>{(item.data as DashComment).body}</CommentBody>
+                    </>
                   )}
                   <CommentMeta>
                     <ReaderBadge>{readerName || 'Anonymous'}</ReaderBadge>
