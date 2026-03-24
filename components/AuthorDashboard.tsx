@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useAtom } from 'jotai';
 import { Chapter } from '@/types';
-import LikesHeatmapView from './LikesHeatmapView';
+import LikesHeatmapView, { HeatmapWord } from './LikesHeatmapView';
 import CommentsView from './CommentsView';
 import VersionTimeline from './VersionTimeline';
-import { selectedVersionAtom } from '@/lib/atoms';
 
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
@@ -420,11 +418,11 @@ export default function AuthorDashboard() {
   const [displayedCommitSha, setDisplayedCommitSha] = useState<string>('');
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('likes');
-  const [, setSelectedVersionSha] = useAtom(selectedVersionAtom);
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
   const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
   const [, setPreComputeProgress] = useState(0);
   const [heatmapLines, setHeatmapLines] = useState<HeatmapLine[]>([]);
+  const [heatmapWords, setHeatmapWords] = useState<HeatmapWord[]>([]);
   const [dashComments, setDashComments] = useState<DashComment[]>([]);
   const [dashSuggestions, setDashSuggestions] = useState<DashSuggestion[]>([]);
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -476,6 +474,7 @@ export default function AuthorDashboard() {
         const data = await res.json();
         console.log('[dashboard] heatmap lines:', data.heatmap?.length, 'totalReaders:', data.totalReaders, 'reactions:', data.debug?.reactionRows, 'comments:', data.debug?.commentRows);
         setHeatmapLines(data.heatmap || []);
+        setHeatmapWords(data.words || []);
       } else {
         console.error('[dashboard] heatmap fetch failed:', res.status, await res.text());
       }
@@ -627,7 +626,6 @@ export default function AuthorDashboard() {
                     chapterId={selectedChapterId}
                     currentCommitSha={currentCommitSha}
                     onVersionChange={(sha) => {
-                      setSelectedVersionSha(sha);
                       fetchChapterContent(selectedChapterId, sha);
                     }}
                   />
@@ -650,6 +648,7 @@ export default function AuthorDashboard() {
                           <LikesHeatmapView
                             chapterHtml={chapterHtml}
                             heatmapLines={heatmapLines}
+                            words={heatmapWords}
                           />
                         )}
                         {activeView === 'comments' && (
@@ -657,6 +656,8 @@ export default function AuthorDashboard() {
                             chapterHtml={chapterHtml}
                             comments={dashComments}
                             suggestions={dashSuggestions}
+                            chapterId={contentChapterId ?? ''}
+                            chapterVersionId={chapterVersionId ?? ''}
                           />
                         )}
                       </ContentTransition>

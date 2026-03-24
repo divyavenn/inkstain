@@ -128,6 +128,43 @@ export function wordRangeToCharPos(
 }
 
 /**
+ * Convert a char range back to word indices within rendered HTML.
+ * This is the inverse of wordRangeToCharPos — finds which words overlap [charStart, charStart+charLength).
+ */
+export function charRangeToWordRange(
+  renderedHtml: string,
+  charStart: number,
+  charLength: number,
+): { wordStart: number; wordEnd: number } | null {
+  const text = htmlToTextContent(renderedHtml);
+  const charEnd = charStart + charLength;
+  let pos = 0;
+  let wordCount = 0;
+  let firstWord = -1;
+  let lastWord = -1;
+
+  while (pos < text.length && /\s/.test(text[pos])) pos++;
+
+  while (pos < text.length) {
+    const begin = pos;
+    while (pos < text.length && !/\s/.test(text[pos])) pos++;
+    const end = pos;
+
+    // Overlap check: word overlaps the char range
+    if (begin < charEnd && end > charStart) {
+      if (firstWord === -1) firstWord = wordCount;
+      lastWord = wordCount;
+    }
+
+    wordCount++;
+    while (pos < text.length && /\s/.test(text[pos])) pos++;
+  }
+
+  if (firstWord === -1) return null;
+  return { wordStart: firstWord, wordEnd: lastWord };
+}
+
+/**
  * Map a feedback word range from an old version into a new version using the
  * stored word map (new→old).
  *

@@ -168,8 +168,13 @@ CREATE TABLE IF NOT EXISTS feedback_reactions (
   reader_profile_id uuid REFERENCES reader_profiles(id),
   reader_group_id uuid REFERENCES reader_groups(id),
   reader_invite_id uuid REFERENCES reader_invites(id),
-  start_line int NOT NULL,
-  end_line int NOT NULL,
+  start_line int,
+  end_line int,
+  word_start int,
+  word_end int,
+  char_start int,
+  char_length int,
+  selected_text text,
   reaction text NOT NULL CHECK (reaction IN ('like', 'dislike')),
   created_at timestamptz NOT NULL DEFAULT now()
 );
@@ -218,6 +223,15 @@ ALTER TABLE feedback_comments DROP COLUMN IF EXISTS start_line;
 ALTER TABLE feedback_comments DROP COLUMN IF EXISTS end_line;
 ALTER TABLE suggested_edits DROP COLUMN IF EXISTS start_line;
 ALTER TABLE suggested_edits DROP COLUMN IF EXISTS end_line;
+
+-- Add word/char anchor columns to feedback_reactions (reactions now word-anchored)
+ALTER TABLE feedback_reactions ADD COLUMN IF NOT EXISTS word_start int;
+ALTER TABLE feedback_reactions ADD COLUMN IF NOT EXISTS word_end int;
+ALTER TABLE feedback_reactions ADD COLUMN IF NOT EXISTS char_start int;
+ALTER TABLE feedback_reactions ADD COLUMN IF NOT EXISTS char_length int;
+ALTER TABLE feedback_reactions ADD COLUMN IF NOT EXISTS selected_text text;
+ALTER TABLE feedback_reactions ALTER COLUMN start_line DROP NOT NULL;
+ALTER TABLE feedback_reactions ALTER COLUMN end_line DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS interest_signups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

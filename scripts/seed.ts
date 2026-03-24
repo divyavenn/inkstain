@@ -158,10 +158,21 @@ const GROUPS = [
 
 // selectedText must match the rendered text content verbatim (markdown syntax stripped).
 const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number }> = [
+  // Three readers on the same passage — Diana & Marcus on the same (early) version, Sofia on a later one
+  {
+    selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
+    body: 'That first line lands so hard. "A shadow should love who its owner loves" is a beautiful, strange rule. Sets up the whole tragedy in one breath.',
+    readerIdx: 0,
+  },
   {
     selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
     body: 'The opening hook is wonderful — dropped right into the mythology without exposition. But "shadow" feels abstract; could you give us a small physical detail in the first sentence to anchor the reader?',
     readerIdx: 1,
+  },
+  {
+    selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
+    body: 'Coming back to this on the revision — I\'d wondered if the second sentence was redundant, but it isn\'t. It does the work of establishing the stakes quietly. Keep it.',
+    readerIdx: 2,
   },
   {
     selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.',
@@ -171,7 +182,7 @@ const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number
   {
     selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.',
     body: 'The kithara detail is perfect. Shows rather than tells his artistry. I kept hearing the music as I read.',
-    readerIdx: 2,
+    readerIdx: 1,
   },
   {
     selectedText: 'Did you eat a bees\' nest? Is this belly filled with cleverness and honey?',
@@ -407,41 +418,65 @@ async function main() {
     process.exit(1);
   }
 
+  // Map each reader index to the document version they "read".
+  // Readers 0 (Diana) and 1 (Marcus) share the same earliest version so their
+  // feedback — including the three overlapping comments — lands on the same snapshot.
+  const n = allDocVersions.length;
+  const readerVersionIndex: Record<number, number> = {
+    0: 0,                                // Diana: first (earliest) version
+    1: 0,                                // Marcus: same as Diana (enables overlapping comments)
+    2: n - 1,                            // Sofia: latest version
+    3: Math.max(0, Math.floor(n / 2)),   // James: middle version
+  };
 
-  // Chapter 1 reactions
-  const c1Reactions: Array<[number, number, 'like' | 'dislike', number]> = [
-    [1,  3,  'like',    0], [1,  3,  'like',    1], [1,  3,  'like',    2],
-    [5,  9,  'like',    0], [5,  9,  'like',    1],
-    [10, 13, 'like',    0], [10, 13, 'like',    2],
-    [15, 17, 'like',    1],
-    [18, 21, 'like',    0], [18, 21, 'dislike', 3],
-    [24, 26, 'like',    2],
-    [31, 35, 'like',    0], [31, 35, 'like',    1], [31, 35, 'like',    2],
-    [36, 38, 'dislike', 1],
-    [40, 45, 'like',    0], [40, 45, 'like',    2],
-    [50, 53, 'like',    0], [50, 53, 'like',    1],
-    [55, 58, 'dislike', 3],
-    [60, 65, 'like',    0], [60, 65, 'like',    1], [60, 65, 'like',    2],
-    [70, 74, 'like',    1],
-    [80, 85, 'like',    0],
-    [90, 95, 'like',    2], [90, 95, 'like',    0],
+  // Chapter 1 reactions — text-based so word/char positions can be computed
+  const c1Reactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number }> = [
+    // Diana & Marcus (same early version) both like the opening rule
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like', readerIdx: 0 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like', readerIdx: 1 },
+    // Kithara imagery
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 0 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 1 },
+    // Father's speech
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like', readerIdx: 0 },
+    // King watching Orpheus
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like', readerIdx: 1 },
+    // Sofia (latest version) on the reflective line
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2 },
+    // Quicksilver metaphor — Sofia likes it, James is skeptical
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 2 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 3 },
+    // Hesypera trailing Orpheus — James likes this
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like', readerIdx: 3 },
+    // The great joy line
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 2 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 3 },
   ];
 
-  const c2Reactions: Array<[number, number, 'like' | 'dislike', number]> = [
-    [1,  4,  'like',    0], [1,  4,  'like',    2],
-    [8,  12, 'like',    0], [8,  12, 'like',    1],
-    [15, 18, 'dislike', 3],
-    [20, 25, 'like',    0], [20, 25, 'like',    2],
-    [30, 33, 'like',    1],
-    [40, 44, 'like',    0],
-    [50, 55, 'like',    2], [50, 55, 'like',    0],
+  // Chapter 2 reactions — text-based
+  const c2Reactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number }> = [
+    // Olyxena intro
+    { selectedText: 'Everything about her was loud and undignified and careless. But she was easy to love', reaction: 'like', readerIdx: 0 },
+    // Eurydice's moods
+    { selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.', reaction: 'like', readerIdx: 1 },
+    // The scent description
+    { selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools', reaction: 'like', readerIdx: 2 },
+    // Shadow line in Orpheus's dialogue — great callback
+    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 0 },
+    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 2 },
+    // Night on the river
+    { selectedText: 'The moon hung heavy in the sky and the homelike Hebrus became a different river entirely, dark and seemingly endless.', reaction: 'like', readerIdx: 2 },
+    // Eurydice burning against darkness
+    { selectedText: 'She burned against the darkness, her face tipped back to drink up the moon.', reaction: 'like', readerIdx: 3 },
+    // James dislikes something
+    { selectedText: 'She laid down her needlework and, almost without knowing what she was doing, walked over to join Eurydice.', reaction: 'dislike', readerIdx: 3 },
   ];
 
   let totalReactions = 0, totalComments = 0, totalEdits = 0, totalReads = 0;
 
   console.log('\n💚 Seeding reactions, comments, edits, and reads for all versions…');
 
-  for (const dv of allDocVersions) {
+  for (const [dvIndex, dv] of allDocVersions.entries()) {
     const cvRows = await sql`
       SELECT cv.id, c.file_path
       FROM chapter_versions cv
@@ -456,17 +491,23 @@ async function main() {
     console.log(`  commit ${(dv.commit_sha as string).slice(0, 8)}: c1=${c1Id?.slice(0,8) ?? 'missing'} c2=${c2Id?.slice(0,8) ?? 'missing'}`);
 
     if (c1Id) {
-      for (const [s, e, reaction, ri] of c1Reactions) {
-        await sql`
-          INSERT INTO feedback_reactions (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, reaction)
-          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${s}, ${e}, ${reaction})
-        `;
-      }
-      totalReactions += c1Reactions.length;
-
       const [c1Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c1Id}`;
 
-      for (const c of COMMENTS_C1) {
+      const c1ReactionsToSeed = c1Reactions.filter(r => readerVersionIndex[r.readerIdx] === dvIndex);
+      for (const r of c1ReactionsToSeed) {
+        const ri = r.readerIdx;
+        const wp = feedbackWordPos(c1Ver.rendered_html, r.selectedText);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
+        await sql`
+          INSERT INTO feedback_reactions (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, selected_text, word_start, word_end, char_start, char_length, reaction)
+          VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${r.selectedText}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${r.reaction})
+        `;
+      }
+      totalReactions += c1ReactionsToSeed.length;
+
+      // Only seed each reader's comments on their assigned version
+      const c1CommentsToSeed = COMMENTS_C1.filter(c => readerVersionIndex[c.readerIdx] === dvIndex);
+      for (const c of c1CommentsToSeed) {
         const ri = c.readerIdx;
         const wp = feedbackWordPos(c1Ver.rendered_html, c.selectedText);
         const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
@@ -475,9 +516,10 @@ async function main() {
           VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.selectedText}, ${c.body}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
-      totalComments += COMMENTS_C1.length;
+      totalComments += c1CommentsToSeed.length;
 
-      for (const e of EDITS_C1) {
+      const c1EditsToSeed = EDITS_C1.filter(e => readerVersionIndex[e.readerIdx] === dvIndex);
+      for (const e of c1EditsToSeed) {
         const ri = e.readerIdx;
         const wp = feedbackWordPos(c1Ver.rendered_html, e.original);
         const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
@@ -486,7 +528,7 @@ async function main() {
           VALUES (${sessionIds[ri]}, ${c1Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : null}, ${inviteIds[ri]}, ${e.original}, ${e.suggested}, ${e.rationale}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
-      totalEdits += EDITS_C1.length;
+      totalEdits += c1EditsToSeed.length;
 
       // Reads for c1
       const c1Reads = [
@@ -510,17 +552,23 @@ async function main() {
     }
 
     if (c2Id) {
-      for (const [s, e, reaction, ri] of c2Reactions) {
-        await sql`
-          INSERT INTO feedback_reactions (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, start_line, end_line, reaction)
-          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${s}, ${e}, ${reaction})
-        `;
-      }
-      totalReactions += c2Reactions.length;
-
       const [c2Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c2Id}`;
 
-      for (const c of COMMENTS_C2) {
+      const c2ReactionsToSeed = c2Reactions.filter(r => readerVersionIndex[r.readerIdx] === dvIndex);
+      for (const r of c2ReactionsToSeed) {
+        const ri = r.readerIdx;
+        const wp = feedbackWordPos(c2Ver.rendered_html, r.selectedText);
+        const cp = wp ? wordRangeToCharPos(c2Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
+        await sql`
+          INSERT INTO feedback_reactions (reader_session_id, chapter_version_id, reader_profile_id, reader_group_id, reader_invite_id, selected_text, word_start, word_end, char_start, char_length, reaction)
+          VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${r.selectedText}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${r.reaction})
+        `;
+      }
+      totalReactions += c2ReactionsToSeed.length;
+
+      // Only seed each reader's comments on their assigned version
+      const c2CommentsToSeed = COMMENTS_C2.filter(c => readerVersionIndex[c.readerIdx] === dvIndex);
+      for (const c of c2CommentsToSeed) {
         const ri = c.readerIdx;
         const wp = feedbackWordPos(c2Ver.rendered_html, c.selectedText);
         const cp = wp ? wordRangeToCharPos(c2Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
@@ -529,7 +577,7 @@ async function main() {
           VALUES (${sessionIds[ri]}, ${c2Id}, ${readerIds[ri]}, ${ri < 2 ? groupIds[0] : (ri === 2 ? groupIds[1] : null)}, ${inviteIds[ri]}, ${c.selectedText}, ${c.body}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
         `;
       }
-      totalComments += COMMENTS_C2.length;
+      totalComments += c2CommentsToSeed.length;
 
       // Reads for c2
       const c2Reads = [

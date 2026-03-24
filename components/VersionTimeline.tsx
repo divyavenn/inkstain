@@ -3,8 +3,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useAtom } from 'jotai';
-import { selectedVersionAtom } from '@/lib/atoms';
 
 const CHARCOAL = '#1a1a18';
 const RAIL_Y = 20;
@@ -53,14 +51,6 @@ const Dot = styled(motion.button)<{ $size: number }>`
 
 const Meta = styled(motion.div)`
   padding-top: 0.1rem;
-`;
-
-const MetaMessage = styled(motion.div)`
-  font-family: var(--font-playfair), Georgia, serif;
-  font-size: 0.9rem;
-  font-style: italic;
-  color: ${CHARCOAL};
-  line-height: 1.35;
 `;
 
 const MetaLine = styled(motion.div)`
@@ -171,7 +161,7 @@ const resolveDotPositions = (ideals: number[], radii: number[], trackWidth: numb
 export default function VersionTimeline({ chapterId, currentCommitSha, onVersionChange }: VersionTimelineProps) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedSha, setSelectedSha] = useAtom(selectedVersionAtom);
+  const [selectedSha, setSelectedSha] = useState<string | null>(null);
   const [hoveredSha, setHoveredSha] = useState<string | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [trackWidth, setTrackWidth] = useState(0);

@@ -7,7 +7,7 @@
  * Suitable for server-side use (API routes, server components).
  */
 
-import { mapWordRange } from './wordPos.js';
+import { mapWordRange } from './wordPos';
 
 interface Diff {
   chapter_version_id: string;

@@ -1,11 +1,8 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { motion, AnimatePresence } from 'motion/react';
-import { Cursor } from 'motion-plus/react';
-import FeedbackPopover from './FeedbackPopover';
-
 
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
@@ -14,24 +11,6 @@ const SURFACE_TEXTURE = css`
   background-repeat: repeat;
   background-size: 100px 100px;
 `;
-
-function selectedTextToLines(selectedText: string, markdown: string): { startLine: number; endLine: number } {
-  const lines = markdown.split('\n');
-  const idx = markdown.indexOf(selectedText);
-  if (idx === -1) {
-    const mid = Math.ceil(lines.length / 2);
-    return { startLine: mid, endLine: mid };
-  }
-  let pos = 0;
-  let startLine = 1, endLine = 1;
-  for (let i = 0; i < lines.length; i++) {
-    const lineEnd = pos + lines[i].length;
-    if (startLine === 1 && idx <= lineEnd) startLine = i + 1;
-    if (idx + selectedText.length <= lineEnd + 1) { endLine = i + 1; break; }
-    pos = lineEnd + 1;
-  }
-  return { startLine, endLine };
-}
 
 const Paper = styled(motion.div)`
   padding: 4rem 2.5rem 6rem;
@@ -53,20 +32,10 @@ const TextColumn = styled.div`
 `;
 
 const MarginColumn = styled.div`
-  width: 180px;
+  width: 200px;
   flex-shrink: 0;
   position: relative;
   align-self: stretch;
-`;
-
-const MarginNote = styled.div`
-  position: absolute;
-  font-family: 'Koorkin Pro Regular', 'Cormorant Garamond', Georgia, serif;
-  font-size: 0.78rem;
-  color: #1a1a18;
-  line-height: 1.5;
-  width: 100%;
-  pointer-events: none;
 `;
 
 const ChapterTitle = styled.h2`
@@ -102,6 +71,77 @@ const ChapterContent = styled.div`
     color: #6a6a60;
     font-style: italic;
   }
+
+  mark.highlight-like {
+    background: linear-gradient(to right, rgba(34,197,94,0.1), rgba(34,197,94,0.45) 4%, rgba(34,197,94,0.2));
+    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  }
+  mark.highlight-dislike {
+    background: linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.45) 4%, rgba(239,68,68,0.2));
+    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  }
+  mark.highlight-comment {
+    background: linear-gradient(to right, rgba(253,224,71,0.2), rgba(253,224,71,0.6) 4%, rgba(253,224,71,0.3));
+    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  }
+  mark.highlight-suggestion {
+    background: linear-gradient(to right, rgba(185,40,40,0.06), rgba(185,40,40,0.14) 4%, rgba(185,40,40,0.06));
+    color: rgba(185,40,40,0.9);
+    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+  }
+  mark.suggestion-editing {
+    background: rgba(185,40,40,0.08);
+    color: rgba(185,40,40,0.9);
+    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+    outline: none; cursor: text; caret-color: rgba(185,40,40,0.9);
+    border-bottom: 1.5px solid rgba(185,40,40,0.5);
+  }
+  mark.highlight-focused {
+    outline: 2px solid rgba(26,26,24,0.4);
+    outline-offset: 1px;
+  }
+  mark:hover { filter: brightness(0.88); }
+`;
+
+const EditHint = styled.div`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: rgba(185,40,40,0.6);
+  margin-top: 0.5rem;
+  letter-spacing: 0.02em;
+`;
+
+const MarginNoteEl = styled.div<{ $isPending?: boolean }>`
+  position: absolute;
+  width: 100%;
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.4rem;
+  color: ${p => p.$isPending ? 'rgba(26,26,24,0.5)' : '#333'};
+  line-height: 1.4;
+  pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
+  cursor: ${p => p.$isPending ? 'default' : 'text'};
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(253,224,71,0.5);
+`;
+
+const MarginNoteTextarea = styled.textarea`
+  font-family: var(--font-caveat), cursive;
+  font-size: 1.4rem;
+  color: #333;
+  line-height: 1.4;
+  width: 100%;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+  padding: 0;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(253,224,71,0.8);
 `;
 
 const SuccessToast = styled(motion.div)`
@@ -116,32 +156,6 @@ const SuccessToast = styled(motion.div)`
   z-index: 10000;
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.875rem;
-`;
-
-const Pill = styled.div<{ $reaction: 'like' | 'dislike'; $hasComment: boolean }>`
-  position: fixed;
-  transform: translateX(-50%);
-  background: ${p =>
-    p.$hasComment ? 'rgba(202,138,4,0.95)' :
-    p.$reaction === 'like' ? 'rgba(34,197,94,0.95)' :
-    'rgba(239,68,68,0.95)'};
-  color: white;
-  padding: 0.35rem 0.8rem;
-  border-radius: 999px;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.8rem;
-  pointer-events: none;
-  z-index: 10000;
-  white-space: nowrap;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
-const PillHint = styled.span`
-  font-size: 0.68rem;
-  opacity: 0.7;
 `;
 
 const ChapterNav = styled.div`
@@ -165,7 +179,6 @@ const NavButton = styled.button`
   align-items: center;
   gap: 0.5rem;
   transition: color 0.15s ease;
-
   &:hover { color: #1a1a18; }
 `;
 
@@ -186,81 +199,599 @@ interface ChapterData {
   assignments: Record<string, 'A' | 'B'>;
 }
 
-interface PendingFeedback {
-  text: string;
-  start: number;
-  end: number;
-  pillX: number;  // viewport coords
-  pillY: number;
-  reaction: 'like' | 'dislike';
+type PendingMode = 'like' | 'dislike' | 'comment';
+
+interface PendingState {
+  selectedText: string;
+  charStart: number;
+  charLength: number;
+  mode: PendingMode;
   commentText: string;
+  anchorY: number; // px from top of margin column
 }
 
-export interface SavedFeedback {
-  localId: string;
-  snippetStart: number;
-  snippetEnd: number;
-  type: 'like' | 'dislike' | 'comment';
+interface FeedbackItem {
+  id: string;
+  type: 'like' | 'dislike' | 'comment' | 'suggestion';
+  charStart: number;
+  charLength: number;
+  comment?: string;      // for comment type: the note text
+  anchorY?: number;      // for comment type: margin note position
+  suggestedText?: string; // for suggestion type: what the user typed
+}
+
+interface EditingNote {
+  itemId: string;
   text: string;
-  comment?: string;
 }
 
-interface EditState {
-  localId: string;
-  x: number;
-  y: number;
+// Walk DOM text nodes to compute char offset from container root
+function getCharOffset(container: Node, targetNode: Node, targetOffset: number): number {
+  let pos = 0;
+  const walk = (cur: Node): boolean => {
+    if (cur === targetNode) {
+      pos += targetOffset;
+      return true;
+    }
+    if (cur.nodeType === Node.TEXT_NODE) {
+      pos += (cur.textContent || '').length;
+    } else {
+      for (const child of Array.from(cur.childNodes)) {
+        if (walk(child)) return true;
+      }
+    }
+    return false;
+  };
+  walk(container);
+  return pos;
 }
 
-interface CommentPosition {
-  localId: string;
-  top: number;
-  text: string;
+// Apply highlight marks to HTML using char ranges
+function buildHighlightedHtml(
+  html: string,
+  items: FeedbackItem[],
+  pending: PendingState | null,
+  focusedId: string | null,
+  suggestionEdit?: { charStart: number; charLength: number },
+): string {
+  if (typeof window === 'undefined') return html;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+
+  const toRender = [
+    ...items.map(item => ({
+      charStart: item.charStart,
+      charLength: item.charLength,
+      cssClass: `highlight-${item.type}`,
+      id: item.id,
+      suggestedText: item.type === 'suggestion' ? item.suggestedText : undefined,
+    })),
+    ...(pending ? [{ charStart: pending.charStart, charLength: pending.charLength, cssClass: `highlight-${pending.mode}`, id: '__pending__', suggestedText: undefined }] : []),
+  ].sort((a, b) => a.charStart - b.charStart);
+
+  for (const item of toRender) {
+    charWrap(div, item.charStart, item.charLength, () => {
+      const mark = document.createElement('mark');
+      mark.className = item.cssClass + (item.id === focusedId ? ' highlight-focused' : '');
+      if (item.id !== '__pending__') mark.dataset.feedbackId = item.id;
+      return mark;
+    }, item.suggestedText);
+  }
+
+  // Inject an inline contentEditable mark for active suggestion editing
+  if (suggestionEdit) {
+    charWrap(div, suggestionEdit.charStart, suggestionEdit.charLength, () => {
+      const mark = document.createElement('mark');
+      mark.className = 'highlight-suggestion suggestion-editing';
+      mark.contentEditable = 'true';
+      mark.style.outline = 'none';
+      mark.style.cursor = 'text';
+      return mark;
+    });
+  }
+
+  return div.innerHTML;
+}
+
+// Wrap text nodes overlapping [charIdx, charIdx+length) with a new element.
+// If replacementText is provided, the first overlapping span shows replacementText
+// instead of the original content; subsequent overlapping spans are removed.
+function charWrap(
+  div: HTMLElement,
+  charIdx: number,
+  length: number,
+  makeEl: () => HTMLElement,
+  replacementText?: string,
+): void {
+  const selEnd = charIdx + length;
+  let charPos = 0;
+  let replacementUsed = false;
+
+  const walk = (node: Node): void => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      const nodeEnd = charPos + text.length;
+      const overlapStart = Math.max(charPos, charIdx);
+      const overlapEnd = Math.min(nodeEnd, selEnd);
+
+      if (overlapStart < overlapEnd && text.slice(overlapStart - charPos, overlapEnd - charPos).trim() !== '') {
+        const localStart = overlapStart - charPos;
+        const localEnd = overlapEnd - charPos;
+        const before = document.createTextNode(text.slice(0, localStart));
+        const after = document.createTextNode(text.slice(localEnd));
+
+        if (replacementText !== undefined) {
+          if (!replacementUsed) {
+            const el = makeEl();
+            el.textContent = replacementText;
+            node.parentNode?.insertBefore(before, node);
+            node.parentNode?.insertBefore(el, node);
+            node.parentNode?.insertBefore(after, node);
+            replacementUsed = true;
+          } else {
+            // Subsequent nodes in range: remove the overlapping content
+            node.parentNode?.insertBefore(before, node);
+            node.parentNode?.insertBefore(after, node);
+          }
+          node.parentNode?.removeChild(node);
+        } else {
+          const el = makeEl();
+          el.textContent = text.slice(localStart, localEnd);
+          node.parentNode?.insertBefore(before, node);
+          node.parentNode?.insertBefore(el, node);
+          node.parentNode?.insertBefore(after, node);
+          node.parentNode?.removeChild(node);
+        }
+      }
+
+      charPos += text.length;
+    } else {
+      for (const child of Array.from(node.childNodes)) {
+        walk(child);
+      }
+    }
+  };
+
+  walk(div);
+}
+
+// Find the minimal contiguous diff between two strings
+function findMinimalDiff(original: string, current: string): {
+  originalSpan: string; currentSpan: string; diffStart: number;
+} | null {
+  if (original === current) return null;
+
+  let start = 0;
+  while (start < original.length && start < current.length && original[start] === current[start]) {
+    start++;
+  }
+
+  let endOrig = original.length;
+  let endCurr = current.length;
+  while (endOrig > start && endCurr > start && original[endOrig - 1] === current[endCurr - 1]) {
+    endOrig--;
+    endCurr--;
+  }
+
+  return {
+    originalSpan: original.slice(start, endOrig),
+    currentSpan: current.slice(start, endCurr),
+    diffStart: start,
+  };
+}
+
+// Margin note collision avoidance
+const MARGIN_LINE_PX = 32;   // approx px per line at 1.4rem Caveat, line-height 1.4
+const MARGIN_CHARS_PER_LINE = 18; // approx chars fitting in margin column
+const MARGIN_NOTE_GAP = 8;   // min gap between adjacent notes
+
+function resolveMarginPositions(
+  items: Array<{ id: string; anchorY: number; comment?: string }>
+): Map<string, number> {
+  const sorted = [...items].sort((a, b) => a.anchorY - b.anchorY);
+  const result = new Map<string, number>();
+  let bottomY = 0;
+  for (const item of sorted) {
+    const y = Math.max(Math.max(0, item.anchorY), bottomY);
+    result.set(item.id, y);
+    const lines = Math.max(1, Math.ceil((item.comment?.length ?? 3) / MARGIN_CHARS_PER_LINE));
+    bottomY = y + lines * MARGIN_LINE_PX + MARGIN_NOTE_GAP;
+  }
+  return result;
 }
 
 export default function ChapterReader({ chapterId, sessionId, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
-  const [savedFeedback, setSavedFeedback] = useState<SavedFeedback[]>([]);
-  const [editState, setEditState] = useState<EditState | null>(null);
-  const [commentPositions, setCommentPositions] = useState<CommentPosition[]>([]);
+  const [pending, setPending] = useState<PendingState | null>(null);
+  const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
+  const [focusedFeedbackId, setFocusedFeedbackId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [suggEditMeta, setSuggEditMeta] = useState<{ originalText: string; charStart: number; charLength: number } | null>(null);
+  const [editingNote, setEditingNote] = useState<EditingNote | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [hoveredMarkType, setHoveredMarkType] = useState<'like' | 'dislike' | 'comment' | null>(null);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const marginColRef = useRef<HTMLDivElement>(null);
   const scrollSentinelRef = useRef<HTMLDivElement>(null);
-  // Refs so keydown handler (added once) can always read latest state
-  const pendingRef = useRef(pendingFeedback);
-  const editRef = useRef(editState);
-  const chapterDataRef = useRef(chapterData);
-  const savedRef = useRef(savedFeedback);
-  useEffect(() => { pendingRef.current = pendingFeedback; }, [pendingFeedback]);
-  useEffect(() => { editRef.current = editState; }, [editState]);
-  useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
-  useEffect(() => { savedRef.current = savedFeedback; }, [savedFeedback]);
 
-  // Track hovered mark type for custom cursor
+  // Refs so keydown handler (added once) can always read latest state
+  const pendingRef = useRef(pending);
+  const editModeRef = useRef(editMode);
+  const focusedIdRef = useRef(focusedFeedbackId);
+  const chapterDataRef = useRef(chapterData);
+  const feedbackItemsRef = useRef(feedbackItems);
+  useEffect(() => { pendingRef.current = pending; }, [pending]);
+  useEffect(() => { editModeRef.current = editMode; }, [editMode]);
+  useEffect(() => { focusedIdRef.current = focusedFeedbackId; }, [focusedFeedbackId]);
+  useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
+  useEffect(() => { feedbackItemsRef.current = feedbackItems; }, [feedbackItems]);
+
+  // Update innerHTML whenever feedbackItems, pending, or focusedId change (not in edit mode)
   useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const onOver = (e: MouseEvent) => {
-      const mark = (e.target as HTMLElement).closest('mark');
-      if (!mark) { setHoveredMarkType(null); return; }
-      if (mark.classList.contains('highlight-like')) setHoveredMarkType('like');
-      else if (mark.classList.contains('highlight-dislike')) setHoveredMarkType('dislike');
-      else if (mark.classList.contains('highlight-comment')) setHoveredMarkType('comment');
+    if (!contentRef.current || !chapterData) return;
+    if (editMode) return;
+    contentRef.current.innerHTML = buildHighlightedHtml(chapterData.html, feedbackItems, pending, focusedFeedbackId);
+  }, [chapterData, feedbackItems, pending, focusedFeedbackId, editMode]);
+
+  useEffect(() => { fetchChapter(); }, [chapterId]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 2000);
+  };
+
+  const fetchChapter = async () => {
+    try {
+      setLoading(true);
+      setPending(null);
+      setFeedbackItems([]);
+      setFocusedFeedbackId(null);
+      setEditMode(false);
+      setSuggEditMeta(null);
+      const res = await fetch(`/api/chapters/${chapterId}`);
+      const data = await res.json();
+      setChapterData(data);
+
+      // Load existing session feedback after chapter loads
+      if (data.versionId) {
+        loadSessionFeedback(data.versionId);
+      }
+    } catch (e) {
+      console.error('Error fetching chapter:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadSessionFeedback = async (versionId: string) => {
+    try {
+      const res = await fetch(`/api/public/session-feedback?sessionId=${sessionId}&chapterVersionId=${versionId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const items: FeedbackItem[] = [
+        ...data.reactions.map((r: any) => ({
+          id: r.id,
+          type: r.reaction as 'like' | 'dislike',
+          charStart: r.char_start,
+          charLength: r.char_length,
+        })),
+        ...data.comments.map((c: any) => ({
+          id: c.id,
+          type: 'comment' as const,
+          charStart: c.char_start,
+          charLength: c.char_length,
+          comment: c.body,
+        })),
+        ...data.suggestions.map((s: any) => ({
+          id: s.id,
+          type: 'suggestion' as const,
+          charStart: s.char_start,
+          charLength: s.char_length,
+          suggestedText: s.suggested_text,
+        })),
+      ];
+      setFeedbackItems(items);
+    } catch (e) {
+      console.error('Error loading session feedback:', e);
+    }
+  };
+
+  const submitPending = useCallback(async () => {
+    const p = pendingRef.current;
+    const cd = chapterDataRef.current;
+    if (!p || !cd) return;
+
+    const localId = Math.random().toString(36).slice(2);
+    const type: FeedbackItem['type'] = p.mode === 'comment' ? 'comment' : p.mode;
+
+    // Optimistically add to local state
+    const newItem: FeedbackItem = {
+      id: localId,
+      type,
+      charStart: p.charStart,
+      charLength: p.charLength,
+      comment: p.mode === 'comment' ? p.commentText : undefined,
+      anchorY: p.anchorY,
     };
-    const onOut = (e: MouseEvent) => {
-      if (!(e.relatedTarget as HTMLElement)?.closest?.('mark')) setHoveredMarkType(null);
-    };
-    el.addEventListener('mouseover', onOver);
-    el.addEventListener('mouseout', onOut);
-    return () => { el.removeEventListener('mouseover', onOver); el.removeEventListener('mouseout', onOut); };
+    setFeedbackItems(prev => [...prev, newItem]);
+    setPending(null);
+    window.getSelection()?.removeAllRanges();
+    showToast(p.mode === 'comment' ? 'Comment saved' : p.mode === 'like' ? 'Liked' : 'Noted');
+
+    try {
+      let url: string;
+      let body: string;
+
+      if (p.mode === 'comment') {
+        url = '/api/public/comments';
+        body = JSON.stringify({ sessionId, chapterVersionId: cd.versionId, body: p.commentText, selectedText: p.selectedText });
+      } else {
+        url = '/api/public/reactions';
+        body = JSON.stringify({ sessionId, chapterVersionId: cd.versionId, reaction: p.mode, selectedText: p.selectedText });
+      }
+
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      if (res.ok) {
+        const data = await res.json();
+        // Replace local ID with server ID
+        setFeedbackItems(prev => prev.map(item => item.id === localId ? { ...item, id: data.id } : item));
+      } else {
+        console.error('Feedback save failed:', res.status);
+      }
+    } catch (err) {
+      console.error('Feedback save error:', err);
+    }
+  }, [sessionId]);
+
+  const deleteFeedback = useCallback(async (id: string) => {
+    const item = feedbackItemsRef.current.find(f => f.id === id);
+    if (!item) return;
+
+    setFeedbackItems(prev => prev.filter(f => f.id !== id));
+    setFocusedFeedbackId(null);
+
+    try {
+      let url: string;
+      if (item.type === 'comment') {
+        url = `/api/public/comments/${id}?sessionId=${sessionId}`;
+      } else if (item.type === 'suggestion') {
+        url = `/api/public/suggestions/${id}?sessionId=${sessionId}`;
+      } else {
+        url = `/api/public/reactions/${id}?sessionId=${sessionId}`;
+      }
+      await fetch(url, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Delete feedback error:', err);
+    }
+  }, [sessionId]);
+
+  const enterSuggestionMode = useCallback((charStart: number, charLength: number, originalText: string) => {
+    if (!contentRef.current || !chapterDataRef.current) return;
+    setSuggEditMeta({ originalText, charStart, charLength });
+    // Build HTML with inline contentEditable mark at the selection
+    contentRef.current.innerHTML = buildHighlightedHtml(
+      chapterDataRef.current.html,
+      feedbackItemsRef.current,
+      null,
+      null,
+      { charStart, charLength },
+    );
+    const mark = contentRef.current.querySelector('mark.suggestion-editing') as HTMLElement | null;
+    if (mark) {
+      mark.focus();
+      // Select all so user can type to replace
+      const range = document.createRange();
+      range.selectNodeContents(mark);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    setEditMode(true);
+    setPending(null);
+    setFocusedFeedbackId(null);
   }, []);
 
-  // Auto-advance to next chapter when sentinel scrolls into view
+  const exitEditMode = useCallback((submit: boolean) => {
+    if (!contentRef.current) return;
+    const mark = contentRef.current.querySelector('mark.suggestion-editing') as HTMLElement | null;
+    const suggestedText = mark?.textContent ?? '';
+    const meta = suggEditMetaRef.current;
+
+    if (submit && meta && suggestedText && suggestedText !== meta.originalText) {
+      submitSuggestion(meta.originalText, suggestedText, meta.charStart);
+    }
+
+    setEditMode(false);
+    setSuggEditMeta(null);
+  }, []);
+
+  const submitSuggestion = useCallback(async (originalText: string, suggestedText: string, _charStart: number) => {
+    const cd = chapterDataRef.current;
+    if (!cd || !originalText || !suggestedText || originalText === suggestedText) return;
+
+    const localId = Math.random().toString(36).slice(2);
+
+    // We don't know charStart/charLength on client accurately for suggestions,
+    // so add a placeholder item; server will compute positions
+    const tmpItem: FeedbackItem = {
+      id: localId,
+      type: 'suggestion',
+      charStart: 0,
+      charLength: 0,
+    };
+    setFeedbackItems(prev => [...prev, tmpItem]);
+    showToast('Edit proposed');
+
+    try {
+      const res = await fetch('/api/public/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, chapterVersionId: cd.versionId, originalText, suggestedText }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Remove placeholder; reload session feedback to get accurate positions
+        setFeedbackItems(prev => prev.filter(f => f.id !== localId));
+        loadSessionFeedback(cd.versionId);
+      } else {
+        setFeedbackItems(prev => prev.filter(f => f.id !== localId));
+        console.error('Suggestion save failed:', res.status);
+      }
+    } catch (err) {
+      setFeedbackItems(prev => prev.filter(f => f.id !== localId));
+      console.error('Suggestion save error:', err);
+    }
+  }, [sessionId]);
+
+  const suggEditMetaRef = useRef(suggEditMeta);
+  useEffect(() => { suggEditMetaRef.current = suggEditMeta; }, [suggEditMeta]);
+
+  // Stable refs for keydown handler
+  const submitPendingRef = useRef(submitPending);
+  const deleteFeedbackRef = useRef(deleteFeedback);
+  const enterSuggestionModeRef = useRef(enterSuggestionMode);
+  const exitEditModeRef = useRef(exitEditMode);
+  useEffect(() => { submitPendingRef.current = submitPending; }, [submitPending]);
+  useEffect(() => { deleteFeedbackRef.current = deleteFeedback; }, [deleteFeedback]);
+  useEffect(() => { enterSuggestionModeRef.current = enterSuggestionMode; }, [enterSuggestionMode]);
+  useEffect(() => { exitEditModeRef.current = exitEditMode; }, [exitEditMode]);
+
+  // Keydown handler — runs once, reads state via refs
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const p = pendingRef.current;
+      const em = editModeRef.current;
+      const fid = focusedIdRef.current;
+
+      // In edit mode: only intercept Enter (submit) and Escape (cancel)
+      if (em) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          exitEditModeRef.current(true);
+        } else if (e.key === 'Escape') {
+          exitEditModeRef.current(false);
+        }
+        return;
+      }
+
+      // Focused highlight: backspace = delete, escape = unfocus
+      if (fid && !p) {
+        if (e.key === 'Backspace') {
+          e.preventDefault();
+          deleteFeedbackRef.current(fid);
+        } else if (e.key === 'Escape') {
+          setFocusedFeedbackId(null);
+        }
+        return;
+      }
+
+      if (!p) return;
+
+      if (e.key === 'Escape') {
+        setPending(null);
+        window.getSelection()?.removeAllRanges();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitPendingRef.current();
+        return;
+      }
+      // Arrow key → toggle like/dislike (only when no comment yet)
+      if (p.commentText.length === 0 && e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        setPending(prev => prev ? { ...prev, mode: prev.mode === 'like' ? 'dislike' : 'like' } : prev);
+        return;
+      }
+      // 'e' key → enter inline suggestion editing mode
+      if (e.key === 'e' && !e.ctrlKey && !e.metaKey && p.commentText.length === 0) {
+        e.preventDefault();
+        enterSuggestionModeRef.current(p.charStart, p.charLength, p.selectedText);
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (p.commentText.length === 0) {
+          setPending(null);
+          window.getSelection()?.removeAllRanges();
+        } else {
+          setPending(prev => prev ? { ...prev, commentText: prev.commentText.slice(0, -1) } : prev);
+        }
+        return;
+      }
+      // Printable char → comment mode
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setPending(prev => prev ? { ...prev, mode: 'comment', commentText: prev.commentText + e.key } : prev);
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []); // once — uses refs
+
+  // Mouse up handler
+  useEffect(() => {
+    const handleMouseUp = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Ignore clicks inside margin column
+      if (target.closest('[data-margin-col]')) return;
+
+      const selection = window.getSelection();
+
+      // Has a text selection → create pending
+      if (selection && !selection.isCollapsed && selection.toString().trim() && contentRef.current) {
+        // Make sure selection is within contentRef
+        const range = selection.getRangeAt(0);
+        if (!contentRef.current.contains(range.commonAncestorContainer)) return;
+
+        const text = selection.toString().trim();
+        const rect = range.getBoundingClientRect();
+
+        const charStart = getCharOffset(contentRef.current, range.startContainer, range.startOffset);
+        const charEnd = getCharOffset(contentRef.current, range.endContainer, range.endOffset);
+        const charLength = Math.max(0, charEnd - charStart);
+
+        const marginTop = marginColRef.current?.getBoundingClientRect().top ?? 0;
+        const anchorY = rect.top - marginTop;
+
+        setPending({
+          selectedText: text,
+          charStart,
+          charLength,
+          mode: 'like',
+          commentText: '',
+          anchorY,
+        });
+        setFocusedFeedbackId(null);
+        return;
+      }
+
+      // Click with no selection
+      if (!selection?.isCollapsed) return;
+
+      // Don't enter edit mode if we're in a feedback interaction
+      if (pendingRef.current) return;
+
+      // Click on existing mark → focus it
+      const mark = target.closest('mark[data-feedback-id]') as HTMLElement | null;
+      if (mark && mark.dataset.feedbackId) {
+        setFocusedFeedbackId(mark.dataset.feedbackId);
+        return;
+      }
+
+      setFocusedFeedbackId(null);
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  // Auto-advance to next chapter
   useEffect(() => {
     if (!nextChapterId || !scrollSentinelRef.current) return;
     const observer = new IntersectionObserver(
@@ -271,250 +802,36 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
     return () => observer.disconnect();
   }, [nextChapterId, onNavigate]);
 
-  // Recompute margin comment positions after each render
+  // Compute margin note positions with collision avoidance
+  const commentItems = feedbackItems.filter(f => f.type === 'comment' && f.anchorY !== undefined);
+  const resolvedMarginPositions = resolveMarginPositions(commentItems as Array<{ id: string; anchorY: number; comment?: string }>);
+  const pendingNoteItem = pending?.mode === 'comment' ? pending : null;
+
+  // Update comment anchor positions based on rendered marks
   useLayoutEffect(() => {
     if (!contentRef.current || !marginColRef.current) return;
     const marginTop = marginColRef.current.getBoundingClientRect().top;
-    const positions: CommentPosition[] = [];
-    for (const fb of savedFeedback) {
-      if (!fb.comment) continue;
-      const mark = contentRef.current.querySelector(`mark[data-local-id="${fb.localId}"]`) as HTMLElement | null;
-      if (!mark) continue;
-      // getBoundingClientRect difference is scroll-invariant between siblings
-      positions.push({ localId: fb.localId, top: mark.getBoundingClientRect().top - marginTop, text: fb.comment });
-    }
-    setCommentPositions(positions);
-  }, [savedFeedback, pendingFeedback]);
-
-  useEffect(() => { fetchChapter(); }, [chapterId]);
-
-  const fetchChapter = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/chapters/${chapterId}`);
-      setChapterData(await res.json());
-    } catch (e) {
-      console.error('Error fetching chapter:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 2000);
-  };
-
-  const submitPending = async () => {
-    const p = pendingRef.current;
-    const cd = chapterDataRef.current;
-    if (!p || !cd) return;
-
-    const { startLine, endLine } = selectedTextToLines(p.text, cd.content);
-    const base = { sessionId, chapterVersionId: cd.versionId, startLine, endLine };
-    const localId = Math.random().toString(36).slice(2);
-    const type: SavedFeedback['type'] = p.commentText ? 'comment' : p.reaction;
-
-    setSavedFeedback(prev => [...prev, {
-      localId,
-      snippetStart: p.start,
-      snippetEnd: p.end,
-      type,
-      text: p.text,
-      comment: p.commentText || undefined,
-    }]);
-
-    setPendingFeedback(null);
-    window.getSelection()?.removeAllRanges();
-    showToast(p.commentText ? 'Comment saved' : p.reaction === 'like' ? 'Liked' : 'Noted');
-
-    try {
-      const url = p.commentText ? '/api/public/comments' : '/api/public/reactions';
-      const body = p.commentText
-        ? JSON.stringify({ ...base, body: p.commentText, selectedText: p.text })
-        : JSON.stringify({ ...base, reaction: p.reaction });
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        console.error('Feedback save failed:', res.status, err);
-      }
-    } catch (err) {
-      console.error('Feedback save error:', err);
-    }
-  };
-
-  // Keydown handler — runs once, reads state via refs
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const pending = pendingRef.current;
-      const editing = editRef.current;
-
-      // Edit mode (existing highlight)
-      if (editing && !pending) {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
-          e.preventDefault();
-          setSavedFeedback(prev => prev.filter(f => f.localId !== editing.localId));
-          setEditState(null);
-        } else if (e.key === 'Escape') {
-          setEditState(null);
-        }
-        return;
-      }
-
-      if (!pending) return;
-
-      if (e.key === 'Escape') {
-        setPendingFeedback(null);
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submitPending();
-        return;
-      }
-      // Toggle reaction (only when no comment yet)
-      if (pending.commentText.length === 0 &&
-          (e.key === 'Tab' || e.key === ' ' || e.key.startsWith('Arrow'))) {
-        e.preventDefault();
-        setPendingFeedback(p => p ? { ...p, reaction: p.reaction === 'like' ? 'dislike' : 'like' } : p);
-        return;
-      }
-      if (e.key === 'Backspace' || e.key === 'Delete') {
-        if (pending.commentText.length === 0) {
-          setPendingFeedback(null);
-          window.getSelection()?.removeAllRanges();
-        } else {
-          setPendingFeedback(p => p ? { ...p, commentText: p.commentText.slice(0, -1) } : p);
-        }
-        return;
-      }
-      // Printable char → build comment
-      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-        setPendingFeedback(p => p ? { ...p, commentText: p.commentText + e.key } : p);
-      }
-    };
-
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []); // once — uses refs
-
-  const handleMouseUp = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
-
-    // Click on existing highlight → open edit
-    const mark = target.closest('mark[data-local-id]') as HTMLElement | null;
-    if (mark) {
-      const rect = mark.getBoundingClientRect();
-      setEditState({
-        localId: mark.dataset.localId!,
-        x: (rect.left + rect.right) / 2,
-        y: rect.top,
-      });
-      setPendingFeedback(null);
-      return;
-    }
-
-    // Click outside popover → close edit
-    if (!target.closest('[data-feedback-popover]')) {
-      setEditState(null);
-    }
-
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !contentRef.current) return;
-
-    const text = selection.toString().trim();
-    if (!text) return;
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    // Char offset within contentRef
-    const getPos = (node: Node, targetNode: Node, offset: number): number => {
-      let pos = 0;
-      const walk = (cur: Node): boolean => {
-        if (cur === targetNode) { pos += offset; return true; }
-        if (cur.nodeType === Node.TEXT_NODE) {
-          pos += (cur.textContent || '').length;
-        } else {
-          for (const child of Array.from(cur.childNodes)) {
-            if (walk(child)) return true;
-          }
-        }
-        return false;
-      };
-      walk(node);
-      return pos;
-    };
-
-    const start = getPos(contentRef.current, range.startContainer, range.startOffset);
-    const end = getPos(contentRef.current, range.endContainer, range.endOffset);
-
-    setPendingFeedback({
-      text,
-      start,
-      end,
-      pillX: (rect.left + rect.right) / 2,
-      pillY: rect.top,
-      reaction: 'like',
-      commentText: '',
-    });
-  };
-
-  useEffect(() => {
-    const h = (e: Event) => handleMouseUp(e as MouseEvent);
-    document.addEventListener('mouseup', h);
-    return () => document.removeEventListener('mouseup', h);
-  }, []);
-
-  // Derive the pending highlight's CSS type — stable across commentText changes after first char
-  const pendingCssType = pendingFeedback
-    ? (pendingFeedback.commentText.length > 0 ? 'comment' : pendingFeedback.reaction)
-    : null;
-
-  // Only recompute when highlight positions/types change, NOT on every commentText keystroke
-  const renderedContent = useMemo(() => {
-    if (!chapterData) return null;
-
-    type RenderItem = { start: number; end: number; cssType: string; localId: string };
-    const items: RenderItem[] = savedFeedback.map(f => ({
-      start: f.snippetStart, end: f.snippetEnd,
-      cssType: f.type, localId: f.localId,
+    setFeedbackItems(prev => prev.map(item => {
+      if (item.type !== 'comment') return item;
+      const mark = contentRef.current!.querySelector(`mark[data-feedback-id="${item.id}"]`) as HTMLElement | null;
+      if (!mark) return item;
+      return { ...item, anchorY: mark.getBoundingClientRect().top - marginTop };
     }));
-    if (pendingFeedback && pendingCssType) {
-      items.push({
-        start: pendingFeedback.start, end: pendingFeedback.end,
-        cssType: pendingCssType,
-        localId: '__pending__',
+  }, [feedbackItems.map(f => f.id).join(','), editMode]);
+
+  const updateNoteText = async (itemId: string, newText: string) => {
+    setFeedbackItems(prev => prev.map(f => f.id === itemId ? { ...f, comment: newText } : f));
+    setEditingNote(null);
+    try {
+      await fetch(`/api/public/comments/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, body: newText }),
       });
+    } catch (err) {
+      console.error('Update note error:', err);
     }
-
-    if (items.length === 0) {
-      return <div dangerouslySetInnerHTML={{ __html: chapterData.html }} />;
-    }
-
-    const plainText = contentRef.current?.innerText || chapterData.content;
-    const sorted = items.sort((a, b) => a.start - b.start);
-
-    let result = plainText;
-    let offset = 0;
-    for (const fb of sorted) {
-      const s = fb.start + offset;
-      const e = fb.end + offset;
-      const localIdAttr = fb.localId !== '__pending__' ? ` data-local-id="${fb.localId}"` : '';
-      const marked = `<mark class="highlight-${fb.cssType}"${localIdAttr}>${result.substring(s, e)}</mark>`;
-      result = result.substring(0, s) + marked + result.substring(e);
-      offset += marked.length - (e - s);
-    }
-    return <div dangerouslySetInnerHTML={{ __html: result.replace(/\n/g, '<br/>') }} />;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chapterData, savedFeedback, pendingFeedback?.start, pendingFeedback?.end, pendingCssType]);
-
-  const editFeedback = editState
-    ? savedFeedback.find(f => f.localId === editState.localId) ?? null
-    : null;
-
+  };
 
   if (loading) {
     return (
@@ -538,47 +855,72 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
 
   return (
     <>
-      <style>{`
-        mark.highlight-like {
-          background: linear-gradient(to right, rgba(34,197,94,0.1), rgba(34,197,94,0.45) 4%, rgba(34,197,94,0.2));
-          border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
-        }
-        mark.highlight-dislike {
-          background: linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.45) 4%, rgba(239,68,68,0.2));
-          border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
-        }
-        mark.highlight-comment {
-          background: linear-gradient(to right, rgba(253,224,71,0.2), rgba(253,224,71,0.6) 4%, rgba(253,224,71,0.3));
-          border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-          -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: none;
-        }
-        mark.highlight-like:hover, mark.highlight-dislike:hover, mark.highlight-comment:hover { filter: brightness(0.88); }
-      `}</style>
-
-        <Paper
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -16 }}
-          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <ContentRow>
-            <TextColumn>
-              <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
-              <ChapterContent ref={contentRef} className="chapter-content">
-                {renderedContent}
-              </ChapterContent>
-            </TextColumn>
-            <MarginColumn ref={marginColRef}>
-              {commentPositions.map(cp => (
-                <MarginNote key={cp.localId} style={{ top: cp.top }}>
-                  {cp.text}
-                </MarginNote>
-              ))}
-            </MarginColumn>
-          </ContentRow>
-        </Paper>
+      <Paper
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -16 }}
+        transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+      >
+        <ContentRow>
+          <TextColumn>
+            <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
+            <ChapterContent
+              ref={contentRef}
+              data-chapter-content="true"
+              // innerHTML is managed by useEffect, not dangerouslySetInnerHTML
+            />
+            {editMode && (
+              <EditHint>type your edit · ↵ propose · esc cancel</EditHint>
+            )}
+          </TextColumn>
+          <MarginColumn ref={marginColRef} data-margin-col="true">
+            {/* Pending margin note (streaming as user types) */}
+            {pendingNoteItem && (
+              <MarginNoteEl
+                $isPending
+                style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
+              >
+                {pendingNoteItem.commentText || '…'}
+              </MarginNoteEl>
+            )}
+            {/* Persisted comment notes */}
+            {commentItems.map(item => (
+              <MarginNoteEl
+                key={item.id}
+                $isPending={false}
+                style={{ top: resolvedMarginPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0) }}
+                onClick={() => {
+                  if (editingNote?.itemId !== item.id) {
+                    setEditingNote({ itemId: item.id, text: item.comment ?? '' });
+                  }
+                }}
+              >
+                {editingNote?.itemId === item.id ? (
+                  <MarginNoteTextarea
+                    autoFocus
+                    value={editingNote.text}
+                    onChange={e => setEditingNote({ ...editingNote, text: e.target.value })}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        updateNoteText(item.id, editingNote.text);
+                      } else if (e.key === 'Escape') {
+                        setEditingNote(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editingNote) updateNoteText(item.id, editingNote.text);
+                    }}
+                    rows={3}
+                  />
+                ) : (
+                  item.comment
+                )}
+              </MarginNoteEl>
+            ))}
+          </MarginColumn>
+        </ContentRow>
+      </Paper>
 
       <ChapterNav>
         {prevChapterId
@@ -589,74 +931,7 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
           : <span />}
       </ChapterNav>
 
-      {/* Scroll sentinel — entering viewport auto-advances to next chapter */}
       <div ref={scrollSentinelRef} style={{ height: 1 }} />
-
-      {pendingFeedback && (
-        <Pill
-          $reaction={pendingFeedback.reaction}
-          $hasComment={pendingFeedback.commentText.length > 0}
-          style={{ left: pendingFeedback.pillX, top: Math.max(8, pendingFeedback.pillY - 44) }}
-        >
-          {pendingFeedback.commentText
-            ? <>💬 <em style={{ fontStyle: 'normal', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', display: 'inline-block' }}>{pendingFeedback.commentText}</em></>
-            : pendingFeedback.reaction === 'like' ? '👍 Good' : '👎 Bad'
-          }
-          <PillHint>
-            {pendingFeedback.commentText
-              ? '↵ save · Esc cancel'
-              : 'Tab/Space to toggle · type to comment · ↵ save'}
-          </PillHint>
-        </Pill>
-      )}
-
-      {editFeedback && editState && (
-        <FeedbackPopover
-          feedback={editFeedback}
-          x={editState.x}
-          y={editState.y}
-          onToggleReaction={() => {
-            setSavedFeedback(prev => prev.map(f =>
-              f.localId === editFeedback.localId
-                ? { ...f, type: f.type === 'like' ? 'dislike' : 'like' }
-                : f
-            ));
-          }}
-          onDelete={() => {
-            setSavedFeedback(prev => prev.filter(f => f.localId !== editFeedback.localId));
-            setEditState(null);
-          }}
-          onClose={() => setEditState(null)}
-        />
-      )}
-
-      <AnimatePresence>
-        {hoveredMarkType && (
-          <Cursor
-            key="mark-cursor"
-            follow
-            offset={{ x: 14, y: 14 }}
-            variants={{ exit: { opacity: 0, scale: 0.85 } }}
-            style={{
-              background: hoveredMarkType === 'like'
-                ? 'rgba(34,197,94,0.9)'
-                : hoveredMarkType === 'dislike'
-                ? 'rgba(239,68,68,0.9)'
-                : 'rgba(202,138,4,0.9)',
-              borderRadius: 999,
-              padding: '3px 10px',
-              color: 'white',
-              fontSize: '0.75rem',
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-              letterSpacing: '0.02em',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {hoveredMarkType === 'like' ? '👍 Liked' : hoveredMarkType === 'dislike' ? '👎 Pass' : '💬 Note'}
-          </Cursor>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showSuccessToast && (

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import StyledComponentsRegistry from '@/lib/registry';
-import { Playfair_Display, Inter } from 'next/font/google';
+import { Playfair_Display, Inter, Caveat } from 'next/font/google';
 import './globals.css';
 
 const playfair = Playfair_Display({
@@ -15,6 +15,12 @@ const inter = Inter({
   display: 'swap',
 });
 
+const caveat = Caveat({
+  subsets: ['latin'],
+  variable: '--font-caveat',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: 'BookBeta - Writing Feedback Platform',
   description: 'A minimal interface for collecting feedback on your writing',
@@ -26,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${inter.variable} ${caveat.variable}`}>
       <body>
         <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
       </body>
