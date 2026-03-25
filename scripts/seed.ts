@@ -156,81 +156,125 @@ const GROUPS = [
   { name: 'Critique Partners', slug: 'critique-partners',  description: 'Deep editing focus' },
 ];
 
+// versionIdx: index into allDocVersions (4 = Mar 16 "migrate 2 neon",
+//                                         5 = Mar 17 first "folder tabs look good now",
+//                                         6 = Mar 17 second "updates")
+// readerIdx:  index into READERS / readerIds / sessionIds
 // selectedText must match the rendered text content verbatim (markdown syntax stripped).
-const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number }> = [
-  // Three readers on the same passage — Diana & Marcus on the same (early) version, Sofia on a later one
+
+const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number; versionIdx: number }> = [
+  // ── Mar 16 (index 4): Diana and Marcus read together ──────────────────────
   {
     selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
     body: 'That first line lands so hard. "A shadow should love who its owner loves" is a beautiful, strange rule. Sets up the whole tragedy in one breath.',
-    readerIdx: 0,
+    readerIdx: 0, versionIdx: 4,
   },
   {
     selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
     body: 'The opening hook is wonderful — dropped right into the mythology without exposition. But "shadow" feels abstract; could you give us a small physical detail in the first sentence to anchor the reader?',
-    readerIdx: 1,
-  },
-  {
-    selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
-    body: 'Coming back to this on the revision — I\'d wondered if the second sentence was redundant, but it isn\'t. It does the work of establishing the stakes quietly. Keep it.',
-    readerIdx: 2,
+    readerIdx: 1, versionIdx: 4,
   },
   {
     selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.',
     body: 'I love *skioula*. The intimacy of a nickname this early does so much work. Could we feel more of her physical response here — a held breath, a heat in the cheeks?',
-    readerIdx: 0,
+    readerIdx: 0, versionIdx: 4,
   },
   {
     selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.',
     body: 'The kithara detail is perfect. Shows rather than tells his artistry. I kept hearing the music as I read.',
-    readerIdx: 1,
+    readerIdx: 1, versionIdx: 4,
   },
   {
     selectedText: 'Did you eat a bees\' nest? Is this belly filled with cleverness and honey?',
     body: 'The father\'s speech is delightful — "Did you eat a bees\' nest?" is a keeper. His joy vs the king\'s coldness works as early foreshadowing.',
-    readerIdx: 0,
+    readerIdx: 0, versionIdx: 4,
   },
   {
     selectedText: 'The look in her beloved prince\'s eyes as they spoke — half yearning to please, half hopeless — made her want to hate the king, but she could not.',
     body: 'The contrast between King Oeagrus with other children vs. with Orpheus is quietly devastating. I wonder if you could slow down here for one more sentence — let us sit with that look in Orpheus\'s eyes.',
-    readerIdx: 1,
+    readerIdx: 1, versionIdx: 4,
+  },
+
+  // ── Mar 17 first (index 5): Sofia reads the same chapter ──────────────────
+  {
+    selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
+    body: 'Coming back to this on the revision — I\'d wondered if the second sentence was redundant, but it isn\'t. It does the work of establishing the stakes quietly. Keep it.',
+    readerIdx: 2, versionIdx: 5,
   },
   {
     selectedText: 'always, always Hesypera listened, and in this way learned many things.',
     body: 'Her role as observer/listener is established really well. It mirrors Orpheus\'s role as singer — she absorbs, he expresses. This duality is going to pay off beautifully.',
-    readerIdx: 2,
+    readerIdx: 2, versionIdx: 5,
+  },
+  {
+    selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.',
+    body: 'This line hit me hard. It reframes everything that came before as the good times Hesypera couldn\'t name. The pacing earns this reflection perfectly.',
+    readerIdx: 2, versionIdx: 5,
+  },
+
+  // ── Mar 17 second (index 6): James's read ─────────────────────────────────
+  {
+    selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.',
+    body: 'Thunder-browed is vivid but I\'m not sure it fits the register of the rest of the prose. Feels slightly archaic compared to the nimbler sentences around it.',
+    readerIdx: 3, versionIdx: 6,
+  },
+  {
+    selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.',
+    body: 'The quicksilver/iron contrast is doing a lot of work here. Strong. But "wrists like a lark\'s whistle" is a synesthetic stretch — I had to re-read it twice.',
+    readerIdx: 3, versionIdx: 6,
+  },
+  {
+    selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went',
+    body: 'The accumulation of "that she… that she… that she" works rhythmically but the passage lingers just a beat too long for me. Cutting the last clause might sharpen it.',
+    readerIdx: 3, versionIdx: 6,
   },
 ];
 
-const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number }> = [
+const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number; versionIdx: number }> = [
+  // ── Mar 16 (index 4) ──────────────────────────────────────────────────────
   {
     selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.',
     body: 'Olyxena\'s introduction is immediately warm and specific. The contrast with Eurydice set up on the next page is effective.',
-    readerIdx: 0,
+    readerIdx: 0, versionIdx: 4,
   },
   {
     selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.',
     body: 'The "wood-god father" rumor is tantalizing. I want just slightly more — a detail that makes us believe it before we dismiss it.',
-    readerIdx: 1,
+    readerIdx: 1, versionIdx: 4,
   },
+  // ── Mar 17 first (index 5) ────────────────────────────────────────────────
   {
     selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools',
     body: 'The smell description (crushed stems, darkened pools) is excellent. Very sensory. Sets Eurydice apart without othering her clumsily.',
-    readerIdx: 2,
+    readerIdx: 2, versionIdx: 5,
+  },
+  {
+    selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.',
+    body: 'This is a neat summary line but it tells rather than shows. Could this be dramatised in a small scene instead?',
+    readerIdx: 2, versionIdx: 5,
   },
 ];
 
-const EDITS_C1: Array<{ original: string; suggested: string; rationale: string; readerIdx: number }> = [
+const EDITS_C1: Array<{ original: string; suggested: string; rationale: string; readerIdx: number; versionIdx: number }> = [
+  // ── Mar 16 (index 4): Marcus's line edits ────────────────────────────────
   {
     original: 'But loyalty is rarely that easy.',
-    suggested: 'But a shadow\'s loyalty is rarely that easy.',
-    rationale: 'The antecedent for "loyalty" is slightly ambiguous after the general statement. Tying it back to "shadow" tightens the logic.',
-    readerIdx: 1,
+    suggested: 'But a shadow\'s loyalty is rarely that simple.',
+    rationale: 'Tying "loyalty" back to "shadow" tightens the antecedent; "simple" echoes the word changed in a recent commit and feels less clichéd than "easy".',
+    readerIdx: 1, versionIdx: 4,
   },
   {
     original: 'One bare foot beat out a rhythm against the wall',
     suggested: 'One bare foot beat time against the stone wall',
     rationale: '"beat time" sounds more musical; "stone wall" gives a texture that matches the palace setting.',
-    readerIdx: 1,
+    readerIdx: 1, versionIdx: 4,
+  },
+  // ── Mar 17 first (index 5): Sofia's edit ─────────────────────────────────
+  {
+    original: 'Good times pass in a blur; only in hindsight do you recognize them as happiness.',
+    suggested: 'Good times pass in a blur; only in grief do you recognise them as happiness.',
+    rationale: '"In grief" is more specific and emotionally charged than "in hindsight" — it anticipates Eurydice\'s death without spelling it out.',
+    readerIdx: 2, versionIdx: 5,
   },
 ];
 
@@ -418,37 +462,64 @@ async function main() {
     process.exit(1);
   }
 
-  // Map each reader index to the document version they "read".
-  // Readers 0 (Diana) and 1 (Marcus) share the same earliest version so their
-  // feedback — including the three overlapping comments — lands on the same snapshot.
-  const n = allDocVersions.length;
+  // Readers 0-2 (Diana, Marcus, Sofia) land on the Mar 16 commit (index 4).
+  // Reader 3 (James) lands on the first Mar 17 commit (index 5).
+  // This concentrates most feedback on the same version for a dense heatmap,
+  // while keeping one reader on a separate nearby version.
   const readerVersionIndex: Record<number, number> = {
-    0: 0,                                // Diana: first (earliest) version
-    1: 0,                                // Marcus: same as Diana (enables overlapping comments)
-    2: n - 1,                            // Sofia: latest version
-    3: Math.max(0, Math.floor(n / 2)),   // James: middle version
+    0: 4,  // Diana: Mar 16 commit (640159f9)
+    1: 4,  // Marcus: Mar 16 commit (same version, overlapping reactions)
+    2: 4,  // Sofia: Mar 16 commit (same version, overlapping reactions)
+    3: 5,  // James: Mar 17 first commit (4e81fb96)
   };
 
-  // Chapter 1 reactions — text-based so word/char positions can be computed
+  // Chapter 1 reactions — dense overlapping data so the heatmap is clearly visible
   const c1Reactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number }> = [
-    // Diana & Marcus (same early version) both like the opening rule
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like', readerIdx: 0 },
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like', readerIdx: 1 },
-    // Kithara imagery
+    // Opening rule — all 4 readers react, 3 like / 1 dislike
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 0 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 1 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 2 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'dislike', readerIdx: 3 },
+
+    // Kithara imagery — all 4 like
     { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 0 },
     { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 1 },
-    // Father's speech
-    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like', readerIdx: 0 },
-    // King watching Orpheus
-    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like', readerIdx: 1 },
-    // Sofia (latest version) on the reflective line
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 2 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 3 },
+
+    // Father's speech — 3 like, 1 dislike
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 0 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 1 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 2 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'dislike', readerIdx: 3 },
+
+    // King watching Orpheus — 2 like, 2 dislike (split opinion)
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 0 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 1 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 2 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 3 },
+
+    // Reflective line — all 4 like
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 0 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 1 },
     { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2 },
-    // Quicksilver metaphor — Sofia likes it, James is skeptical
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 3 },
+
+    // Quicksilver metaphor — 2 like, 2 dislike
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 0 },
     { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 2 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 1 },
     { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 3 },
-    // Hesypera trailing Orpheus — James likes this
-    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like', readerIdx: 3 },
-    // The great joy line
+
+    // Hesypera trailing Orpheus — 3 like, 1 dislike
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 0 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 2 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 3 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'dislike', readerIdx: 1 },
+
+    // The great joy line — all 4 like
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 0 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 1 },
     { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 2 },
     { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 3 },
   ];
@@ -505,8 +576,7 @@ async function main() {
       }
       totalReactions += c1ReactionsToSeed.length;
 
-      // Only seed each reader's comments on their assigned version
-      const c1CommentsToSeed = COMMENTS_C1.filter(c => readerVersionIndex[c.readerIdx] === dvIndex);
+      const c1CommentsToSeed = COMMENTS_C1.filter(c => c.versionIdx === dvIndex);
       for (const c of c1CommentsToSeed) {
         const ri = c.readerIdx;
         const wp = feedbackWordPos(c1Ver.rendered_html, c.selectedText);
@@ -518,7 +588,7 @@ async function main() {
       }
       totalComments += c1CommentsToSeed.length;
 
-      const c1EditsToSeed = EDITS_C1.filter(e => readerVersionIndex[e.readerIdx] === dvIndex);
+      const c1EditsToSeed = EDITS_C1.filter(e => e.versionIdx === dvIndex);
       for (const e of c1EditsToSeed) {
         const ri = e.readerIdx;
         const wp = feedbackWordPos(c1Ver.rendered_html, e.original);
@@ -567,7 +637,7 @@ async function main() {
       totalReactions += c2ReactionsToSeed.length;
 
       // Only seed each reader's comments on their assigned version
-      const c2CommentsToSeed = COMMENTS_C2.filter(c => readerVersionIndex[c.readerIdx] === dvIndex);
+      const c2CommentsToSeed = COMMENTS_C2.filter(c => c.versionIdx === dvIndex);
       for (const c of c2CommentsToSeed) {
         const ri = c.readerIdx;
         const wp = feedbackWordPos(c2Ver.rendered_html, c.selectedText);

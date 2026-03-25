@@ -371,6 +371,44 @@ const LoginError = styled.p`
 
 /* ─── Component ───────────────────────────────────────────────────────────── */
 
+/* ─── Filter dropdown ─────────────────────────────────────────────────────── */
+
+const FilterArea = styled.div`
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 6px;
+`;
+
+const FilterSelect = styled.select`
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  color: rgba(26,26,24,0.65);
+  background: rgba(255,255,255,0.55);
+  border: 1px solid rgba(26,26,24,0.14);
+  border-radius: 4px;
+  padding: 0.3rem 1.6rem 0.3rem 0.6rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(26,26,24,0.35)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  min-width: 160px;
+
+  &:hover { border-color: rgba(26,26,24,0.3); color: #1a1a18; }
+  &:focus { border-color: rgba(26,26,24,0.4); }
+
+  optgroup {
+    font-weight: 600;
+    font-size: 0.68rem;
+    color: rgba(26,26,24,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+`;
+
 type ViewType = 'likes' | 'comments';
 
 interface HeatmapLine {
@@ -423,24 +461,39 @@ export default function AuthorDashboard() {
   const [, setPreComputeProgress] = useState(0);
   const [heatmapLines, setHeatmapLines] = useState<HeatmapLine[]>([]);
   const [heatmapWords, setHeatmapWords] = useState<HeatmapWord[]>([]);
+  const [totalLikes, setTotalLikes] = useState(0);
+  const [totalDislikes, setTotalDislikes] = useState(0);
   const [dashComments, setDashComments] = useState<DashComment[]>([]);
   const [dashSuggestions, setDashSuggestions] = useState<DashSuggestion[]>([]);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [filterValue, setFilterValue] = useState('all');
+  const [readers, setReaders] = useState<{ id: string; display_name: string }[]>([]);
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     fetchChapters();
+    fetchReadersAndGroups();
     setLoading(false);
   }, []);
 
   useEffect(() => {
     if (selectedChapterId) {
       setDisplayedCommitSha('');
+      setTotalLikes(0);
+      setTotalDislikes(0);
       fetchChapterContent(selectedChapterId);
       startPreComputation(selectedChapterId);
     }
   }, [selectedChapterId]);
+
+  useEffect(() => {
+    if (chapterVersionId) {
+      fetchHeatmap(chapterVersionId, filterValue);
+      fetchChapterFeedback(chapterVersionId, filterValue);
+    }
+  }, [filterValue]);
 
 
   const startPreComputation = async (chapterId: string) => {
@@ -465,16 +518,26 @@ export default function AuthorDashboard() {
     }
   };
 
-  const fetchHeatmap = async (versionId: string) => {
+  const buildFilterParams = (filter: string) => {
+    if (!filter || filter === 'all') return '';
+    const [type, id] = filter.split(':');
+    if (type === 'reader') return `?readerProfileId=${id}`;
+    if (type === 'group')  return `?readerGroupId=${id}`;
+    return '';
+  };
+
+  const fetchHeatmap = async (versionId: string, filter = filterValue) => {
     try {
       console.log('[dashboard] fetching heatmap for versionId:', versionId);
-      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/heatmap`);
+      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/heatmap${buildFilterParams(filter)}`);
       if (res.status === 401) { setNeedsLogin(true); return; }
       if (res.ok) {
         const data = await res.json();
         console.log('[dashboard] heatmap lines:', data.heatmap?.length, 'totalReaders:', data.totalReaders, 'reactions:', data.debug?.reactionRows, 'comments:', data.debug?.commentRows);
         setHeatmapLines(data.heatmap || []);
         setHeatmapWords(data.words || []);
+        setTotalLikes(data.totalLikes ?? 0);
+        setTotalDislikes(data.totalDislikes ?? 0);
       } else {
         console.error('[dashboard] heatmap fetch failed:', res.status, await res.text());
       }
@@ -483,9 +546,9 @@ export default function AuthorDashboard() {
     }
   };
 
-  const fetchChapterFeedback = async (versionId: string) => {
+  const fetchChapterFeedback = async (versionId: string, filter = filterValue) => {
     try {
-      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/feedback`);
+      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/feedback${buildFilterParams(filter)}`);
       if (res.status === 401) { setNeedsLogin(true); return; }
       if (res.ok) {
         const data = await res.json();
@@ -495,6 +558,17 @@ export default function AuthorDashboard() {
     } catch (err) {
       console.error('Error fetching feedback:', err);
     }
+  };
+
+  const fetchReadersAndGroups = async () => {
+    try {
+      const [rRes, gRes] = await Promise.all([
+        fetch('/api/dashboard/readers'),
+        fetch('/api/dashboard/groups'),
+      ]);
+      if (rRes.ok) { const d = await rRes.json(); setReaders(d.readers || []); }
+      if (gRes.ok) { const d = await gRes.json(); setGroups(d.groups || []); }
+    } catch { /* ignore */ }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -509,8 +583,9 @@ export default function AuthorDashboard() {
       setNeedsLogin(false);
       setLoginPassword('');
       if (chapterVersionId) {
-        fetchHeatmap(chapterVersionId);
-        fetchChapterFeedback(chapterVersionId);
+        fetchHeatmap(chapterVersionId, filterValue);
+        fetchChapterFeedback(chapterVersionId, filterValue);
+        fetchReadersAndGroups();
       }
     } else {
       setLoginError('Incorrect password');
@@ -546,8 +621,8 @@ export default function AuthorDashboard() {
       console.log('[dashboard] chapter response keys:', Object.keys(data), 'versionId:', data.versionId);
       if (data.versionId) {
         setChapterVersionId(data.versionId);
-        fetchHeatmap(data.versionId);
-        fetchChapterFeedback(data.versionId);
+        fetchHeatmap(data.versionId, filterValue);
+        fetchChapterFeedback(data.versionId, filterValue);
       }
 
       if (!commitSha) {
@@ -561,8 +636,8 @@ export default function AuthorDashboard() {
   };
 
   const chapterStats = {
-    likes: heatmapLines.reduce((s, l) => s + l.likeCount, 0),
-    dislikes: heatmapLines.reduce((s, l) => s + l.dislikeCount, 0),
+    likes: totalLikes,
+    dislikes: totalDislikes,
     comments: dashComments.length,
     edits: dashSuggestions.length,
   };
@@ -592,6 +667,31 @@ export default function AuthorDashboard() {
             </ActiveTabWrap>
           ) : (
             <InactiveTab onClick={() => setActiveView('comments')}>Comments &amp; Edits</InactiveTab>
+          )}
+
+          {(readers.length > 0 || groups.length > 0) && (
+            <FilterArea>
+              <FilterSelect
+                value={filterValue}
+                onChange={e => setFilterValue(e.target.value)}
+              >
+                <option value="all">All readers</option>
+                {groups.length > 0 && (
+                  <optgroup label="Groups">
+                    {groups.map(g => (
+                      <option key={g.id} value={`group:${g.id}`}>{g.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {readers.length > 0 && (
+                  <optgroup label="Readers">
+                    {readers.map(r => (
+                      <option key={r.id} value={`reader:${r.id}`}>{r.display_name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </FilterSelect>
+            </FilterArea>
           )}
         </TabRow>
 

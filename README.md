@@ -196,4 +196,9 @@ MIT License - feel free to use this for your own writing projects!
 
 ---
 
+### viefwing feedback 
+- likes/dislikes/comments thing shows the metrics count for this version/this chapter
+- heatmap is aggregated across all previous versions where the sentence exists
+- the comments should only show for this version/this chapter. unless some text is specifically selected - then it should show all the comments and suggested edits for all prevoius versions for that text, where that text exists. if you click on a comment, it will scroll to reveal the highlight on that page. 
+
 Built with ❤️ for writers by writers

@@ -159,10 +159,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     };
   });
 
+  // Total reaction counts: direct count query (not per-word sums which overcounts spans)
+  const reactionTotals = await sql`
+    SELECT reaction, COUNT(*) as cnt
+    FROM feedback_reactions
+    WHERE chapter_version_id = ${chapterVersionId}
+      AND word_start IS NOT NULL
+      ${readerProfileId ? sql`AND reader_profile_id = ${readerProfileId}` : sql``}
+      ${readerGroupId ? sql`AND reader_group_id = ${readerGroupId}` : sql``}
+      ${readerInviteId ? sql`AND reader_invite_id = ${readerInviteId}` : sql``}
+    GROUP BY reaction
+  `;
+  const likesTotal = Number(reactionTotals.find(r => r.reaction === 'like')?.cnt ?? 0);
+  const dislikesTotal = Number(reactionTotals.find(r => r.reaction === 'dislike')?.cnt ?? 0);
+
   return NextResponse.json({
     chapterVersionId,
     words: wordData,
     heatmap,
     totalReaders: totalReaderCount,
+    totalLikes: likesTotal,
+    totalDislikes: dislikesTotal,
   });
 }

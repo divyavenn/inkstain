@@ -126,7 +126,6 @@ const MarginNoteEl = styled.div<{ $isPending?: boolean }>`
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
   padding-left: 0.5rem;
-  border-left: 1px solid rgba(253,224,71,0.5);
 `;
 
 const MarginNoteTextarea = styled.textarea`
