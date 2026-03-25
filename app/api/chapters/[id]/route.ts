@@ -8,14 +8,15 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    // Look up chapter by id (uuid) or slug
+    // UUID pattern: use primary key lookup; otherwise fall back to slug
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     const chapters = await sql`
       SELECT cv.id as version_id, c.id, c.slug, c.title, c.file_path as filename, c.sort_order as "order",
-             cv.raw_markdown as content, cv.rendered_html as html, dv.commit_sha as "commitSha"
+             cv.rendered_html as html, dv.commit_sha as "commitSha"
       FROM chapters c
       JOIN chapter_versions cv ON cv.chapter_id = c.id
       JOIN document_versions dv ON dv.id = cv.document_version_id
-      WHERE (c.id = ${id} OR c.slug = ${id})
+      WHERE ${isUuid ? sql`c.id = ${id}` : sql`c.slug = ${id}`}
       ORDER BY dv.deployed_at DESC
       LIMIT 1
     `;
@@ -35,11 +36,12 @@ export async function GET(
         order: chapter.order,
       },
       versionId: chapter.version_id,
-      content: chapter.content,
       html: chapter.html,
       commitSha: chapter.commitSha,
       abTests: [],
       assignments: {},
+    }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
   } catch (error) {
     console.error('Error fetching chapter:', error);

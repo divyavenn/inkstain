@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Chapter } from '@/types';
@@ -85,7 +85,7 @@ const ChapterItemTitle = styled.div<{ $active: boolean }>`
 `;
 
 interface ReaderViewProps {
-  sessionId: string;
+  sessionId: string | null;
 }
 
 export default function ReaderView({ sessionId }: ReaderViewProps) {
@@ -93,6 +93,15 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const chapterCache = useRef<Record<string, Record<string, unknown>>>({});
+
+  const prefetchChapter = useCallback(async (id: string) => {
+    if (chapterCache.current[id]) return;
+    try {
+      const res = await fetch(`/api/chapters/${id}`);
+      if (res.ok) chapterCache.current[id] = await res.json();
+    } catch { /* silent */ }
+  }, []);
 
   useEffect(() => {
     fetchChapters();
@@ -100,10 +109,23 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
 
   const fetchChapters = async () => {
     try {
-      const response = await fetch('/api/chapters');
+      const response = await fetch('/api/chapters?includeFirst=1');
       const data = await response.json();
-      setChapters(data.chapters);
-      if (data.chapters.length > 0) setCurrentChapterId(data.chapters[0].id);
+      const chapterList: Chapter[] = data.chapters ?? [];
+      setChapters(chapterList);
+
+      // Store prefetched first chapter in cache
+      if (data.firstChapter) {
+        const firstId = chapterList[0]?.id;
+        if (firstId) chapterCache.current[firstId] = data.firstChapter;
+      }
+
+      if (chapterList.length > 0) setCurrentChapterId(chapterList[0].id);
+
+      // Background-prefetch all remaining chapters
+      for (const ch of chapterList.slice(1)) {
+        prefetchChapter(ch.id);
+      }
     } catch (error) {
       console.error('Error fetching chapters:', error);
     } finally {
@@ -156,6 +178,7 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
             key={currentChapterId}
             chapterId={currentChapterId}
             sessionId={sessionId}
+            prefetchedData={chapterCache.current[currentChapterId]}
             prevChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) - 1]?.id ?? null}
             nextChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) + 1]?.id ?? null}
             onNavigate={setCurrentChapterId}

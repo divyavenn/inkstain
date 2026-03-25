@@ -163,12 +163,23 @@ export async function runIngest(): Promise<IngestResult> {
     `;
     const chapterVersionId = chapterVersion.id as string;
 
-    // Insert lines (delete existing first for idempotency)
+    // Insert lines in a single batch (delete existing first for idempotency)
     await sql`DELETE FROM chapter_version_lines WHERE chapter_version_id = ${chapterVersionId}`;
-    for (const line of parsed.lines) {
+    if (parsed.lines.length > 0) {
+      const versionIds = parsed.lines.map(() => chapterVersionId);
+      const lineNumbers = parsed.lines.map(l => l.lineNumber);
+      const lineTexts = parsed.lines.map(l => l.lineText);
+      const lineHashes = parsed.lines.map(l => l.lineHash);
+      const blockTypes = parsed.lines.map(l => l.blockType);
       await sql`
         INSERT INTO chapter_version_lines (chapter_version_id, line_number, line_text, line_hash, block_type)
-        VALUES (${chapterVersionId}, ${line.lineNumber}, ${line.lineText}, ${line.lineHash}, ${line.blockType})
+        SELECT * FROM unnest(
+          ${versionIds}::uuid[],
+          ${lineNumbers}::int[],
+          ${lineTexts}::text[],
+          ${lineHashes}::text[],
+          ${blockTypes}::text[]
+        )
       `;
     }
 

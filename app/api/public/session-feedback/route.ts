@@ -11,26 +11,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required params' }, { status: 400 });
     }
 
-    const reactions = await sql`
-      SELECT id, reaction, char_start, char_length, selected_text
-      FROM feedback_reactions
-      WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
-        AND char_start IS NOT NULL AND char_length IS NOT NULL
-    `;
-
-    const comments = await sql`
-      SELECT id, body, char_start, char_length, selected_text
-      FROM feedback_comments
-      WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
-        AND char_start IS NOT NULL AND char_length IS NOT NULL
-    `;
-
-    const suggestions = await sql`
-      SELECT id, original_text, suggested_text, char_start, char_length
-      FROM suggested_edits
-      WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
-        AND char_start IS NOT NULL AND char_length IS NOT NULL
-    `;
+    const [reactions, comments, suggestions] = await Promise.all([
+      sql`
+        SELECT id, reaction, char_start, char_length, selected_text
+        FROM feedback_reactions
+        WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
+          AND char_start IS NOT NULL AND char_length IS NOT NULL
+      `,
+      sql`
+        SELECT id, body, char_start, char_length, selected_text
+        FROM feedback_comments
+        WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
+          AND char_start IS NOT NULL AND char_length IS NOT NULL
+      `,
+      sql`
+        SELECT id, original_text, suggested_text, char_start, char_length
+        FROM suggested_edits
+        WHERE reader_session_id = ${sessionId} AND chapter_version_id = ${chapterVersionId}
+          AND char_start IS NOT NULL AND char_length IS NOT NULL
+      `,
+    ]);
 
     return NextResponse.json({ reactions, comments, suggestions });
   } catch (err) {

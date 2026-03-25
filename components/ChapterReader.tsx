@@ -183,7 +183,8 @@ const NavButton = styled.button`
 
 interface ChapterReaderProps {
   chapterId: string;
-  sessionId: string;
+  sessionId: string | null;
+  prefetchedData?: Record<string, unknown>;
   prevChapterId: string | null;
   nextChapterId: string | null;
   onNavigate: (id: string) => void;
@@ -399,7 +400,7 @@ function resolveMarginPositions(
   return result;
 }
 
-export default function ChapterReader({ chapterId, sessionId, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
+export default function ChapterReader({ chapterId, sessionId, prefetchedData, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingState | null>(null);
@@ -436,6 +437,13 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
 
   useEffect(() => { fetchChapter(); }, [chapterId]);
 
+  // When sessionId arrives after the chapter is already loaded, fetch feedback
+  useEffect(() => {
+    if (sessionId && chapterData?.versionId) {
+      loadSessionFeedback(chapterData.versionId);
+    }
+  }, [sessionId]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setShowSuccessToast(true);
@@ -450,8 +458,9 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
       setFocusedFeedbackId(null);
       setEditMode(false);
       setSuggEditMeta(null);
-      const res = await fetch(`/api/chapters/${chapterId}`);
-      const data = await res.json();
+
+      // Use prefetched data if available (first chapter already loaded with chapter list)
+      const data = prefetchedData ?? await fetch(`/api/chapters/${chapterId}`).then(r => r.json());
       setChapterData(data);
 
       // Load existing session feedback after chapter loads
@@ -466,6 +475,7 @@ export default function ChapterReader({ chapterId, sessionId, prevChapterId, nex
   };
 
   const loadSessionFeedback = async (versionId: string) => {
+    if (!sessionId) return;
     try {
       const res = await fetch(`/api/public/session-feedback?sessionId=${sessionId}&chapterVersionId=${versionId}`);
       if (!res.ok) return;

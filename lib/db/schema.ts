@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS document_versions (
   UNIQUE (work_id, commit_sha)
 );
 
+CREATE INDEX IF NOT EXISTS idx_document_versions_deployed ON document_versions(deployed_at DESC);
+
 CREATE TABLE IF NOT EXISTS chapter_versions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   chapter_id uuid NOT NULL REFERENCES chapters(id),
@@ -180,6 +182,7 @@ CREATE TABLE IF NOT EXISTS feedback_reactions (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reactions_chapter_version ON feedback_reactions(chapter_version_id);
+CREATE INDEX IF NOT EXISTS idx_reactions_session_version ON feedback_reactions(reader_session_id, chapter_version_id);
 
 CREATE TABLE IF NOT EXISTS feedback_comments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -198,6 +201,7 @@ CREATE TABLE IF NOT EXISTS feedback_comments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_comments_chapter_version ON feedback_comments(chapter_version_id);
+CREATE INDEX IF NOT EXISTS idx_comments_session_version ON feedback_comments(reader_session_id, chapter_version_id);
 
 CREATE TABLE IF NOT EXISTS suggested_edits (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -217,6 +221,7 @@ CREATE TABLE IF NOT EXISTS suggested_edits (
 );
 
 CREATE INDEX IF NOT EXISTS idx_suggested_edits_chapter_version ON suggested_edits(chapter_version_id);
+CREATE INDEX IF NOT EXISTS idx_suggested_edits_session_version ON suggested_edits(reader_session_id, chapter_version_id);
 
 -- Drop deprecated line-number columns from feedback tables (word/char anchoring replaces them)
 ALTER TABLE feedback_comments DROP COLUMN IF EXISTS start_line;

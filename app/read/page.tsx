@@ -34,7 +34,6 @@ function ReadPageInner() {
     createOrResumeSession();
   }, []);
 
-  if (!sessionId) return null;
   return <ReaderView sessionId={sessionId} />;
 }
 

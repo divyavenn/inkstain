@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const { workSlug, inviteToken, anonymousId: existingAnonId } = await req.json();
 
-    await ensureIngested();
+    ensureIngested().catch(err => console.error('[ingest] background ingest failed:', err));
 
     const works = await sql`SELECT id FROM works WHERE slug = ${workSlug || process.env.BOOK_SLUG || 'default'}`;
     if (works.length === 0) return NextResponse.json({ error: 'Work not found' }, { status: 404 });
