@@ -4,6 +4,36 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react
 import styled, { css } from 'styled-components';
 import { motion, AnimatePresence } from 'motion/react';
 
+const BLUE_INK = '#2b5797';
+const BLUE_INK_LIGHT = 'rgba(43,87,151,0.55)';
+
+// Face SVGs from /public — randomly chosen per feedback item
+const GOOD_FACES = ['/good1.svg', '/good2.svg', '/good3.svg'];
+const MEH_FACES = ['/meh1.svg', '/meh2.svg'];
+
+function seedHash(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  return hash;
+}
+
+function pickFace(type: 'like' | 'dislike', seed: string): string {
+  const hash = Math.abs(seedHash(seed));
+  const faces = type === 'like' ? GOOD_FACES : MEH_FACES;
+  return faces[hash % faces.length];
+}
+
+function faceTransform(seed: string): { rotation: number; offsetY: number; offsetX: number } {
+  const h = seedHash(seed);
+  // rotation: -12° to +12°
+  const rotation = ((h % 25) - 12);
+  // vertical offset: -4px to +4px
+  const offsetY = (((h >> 8) % 9) - 4);
+  // horizontal offset: -3px to +3px
+  const offsetX = (((h >> 16) % 7) - 3);
+  return { rotation, offsetY, offsetX };
+}
+
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
   background-color: ${SURFACE_BASE};
@@ -90,34 +120,28 @@ const ChapterContent = styled.div`
     font-style: italic;
   }
 
-  mark.highlight-like {
-    background: linear-gradient(to right, rgba(34,197,94,0.1), rgba(34,197,94,0.45) 4%, rgba(34,197,94,0.2));
-    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
-  }
-  mark.highlight-dislike {
-    background: linear-gradient(to right, rgba(239,68,68,0.1), rgba(239,68,68,0.45) 4%, rgba(239,68,68,0.2));
+  mark.highlight-like, mark.highlight-dislike {
+    background: linear-gradient(to right, rgba(253,224,71,0.14), rgba(253,224,71,0.45) 4%, rgba(253,224,71,0.25));
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
   mark.highlight-comment {
-    background: linear-gradient(to right, rgba(253,224,71,0.2), rgba(253,224,71,0.6) 4%, rgba(253,224,71,0.3));
+    background: linear-gradient(to right, rgba(253,224,71,0.14), rgba(253,224,71,0.45) 4%, rgba(253,224,71,0.25));
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
   mark.highlight-suggestion {
-    background: linear-gradient(to right, rgba(185,40,40,0.06), rgba(185,40,40,0.14) 4%, rgba(185,40,40,0.06));
-    color: rgba(185,40,40,0.9);
+    background: linear-gradient(to right, rgba(253,224,71,0.1), rgba(253,224,71,0.3) 4%, rgba(253,224,71,0.15));
+    color: ${BLUE_INK};
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
   mark.suggestion-editing {
-    background: rgba(185,40,40,0.08);
-    color: rgba(185,40,40,0.9);
+    background: rgba(253,224,71,0.2);
+    color: ${BLUE_INK};
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
-    outline: none; cursor: text; caret-color: rgba(185,40,40,0.9);
-    border-bottom: 1.5px solid rgba(185,40,40,0.5);
+    outline: none; cursor: text; caret-color: ${BLUE_INK};
   }
   mark.highlight-focused {
     outline: none;
@@ -129,8 +153,9 @@ const SelectionToolbar = styled.div<{ $x: number; $y: number }>`
   position: fixed;
   left: ${p => p.$x}px;
   top: ${p => p.$y}px;
-  transform: translate(-50%, -100%);
+  transform: translateY(-50%);
   display: flex;
+  flex-direction: column;
   gap: 2px;
   background: #1a1a18;
   border-radius: 6px;
@@ -165,17 +190,25 @@ const MarginNoteEl = styled.div<{ $isPending?: boolean }>`
   width: 100%;
   font-family: var(--font-caveat), cursive;
   font-size: 1.4rem;
-  color: ${p => p.$isPending ? 'rgba(26,26,24,0.5)' : '#333'};
+  color: ${p => p.$isPending ? 'rgba(43,87,151,0.4)' : BLUE_INK};
   line-height: 1.4;
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
   padding-left: 0.5rem;
 `;
 
+const MarginFaceImg = styled.img`
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  left: 0.25rem;
+  pointer-events: none;
+`;
+
 const MarginNoteTextarea = styled.textarea`
   font-family: var(--font-caveat), cursive;
   font-size: 1.4rem;
-  color: #333;
+  color: ${BLUE_INK};
   line-height: 1.4;
   width: 100%;
   border: none;
@@ -666,19 +699,18 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
     setSuggEditMeta(null);
   }, []);
 
-  const submitSuggestion = useCallback(async (originalText: string, suggestedText: string, _charStart: number) => {
+  const submitSuggestion = useCallback(async (originalText: string, suggestedText: string, charStartHint: number) => {
     const cd = chapterDataRef.current;
     if (!cd || !originalText || !suggestedText || originalText === suggestedText) return;
 
     const localId = Math.random().toString(36).slice(2);
 
-    // We don't know charStart/charLength on client accurately for suggestions,
-    // so add a placeholder item; server will compute positions
     const tmpItem: FeedbackItem = {
       id: localId,
       type: 'suggestion',
-      charStart: 0,
-      charLength: 0,
+      charStart: charStartHint,
+      charLength: originalText.length,
+      suggestedText,
     };
     setFeedbackItems(prev => [...prev, tmpItem]);
     showToast('Edit proposed');
@@ -691,8 +723,8 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       });
       if (res.ok) {
         const data = await res.json();
-        // Remove placeholder; reload session feedback to get accurate positions
-        setFeedbackItems(prev => prev.filter(f => f.id !== localId));
+        // Replace placeholder ID with server ID; reload for accurate positions
+        setFeedbackItems(prev => prev.map(f => f.id === localId ? { ...f, id: data.id } : f));
         loadSessionFeedback(cd.versionId);
       } else {
         setFeedbackItems(prev => prev.filter(f => f.id !== localId));
@@ -825,7 +857,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           commentText: '',
           anchorY,
         });
-        setToolbarPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
+        setToolbarPos({ x: rect.right + 8, y: rect.top + rect.height / 2 });
         setFocusedFeedbackId(null);
         return;
       }
@@ -833,13 +865,28 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       // Click with no selection
       if (!selection?.isCollapsed) return;
 
-      // Don't enter edit mode if we're in a feedback interaction
+      // Don't re-trigger if we're in a feedback interaction
       if (pendingRef.current) return;
 
-      // Click on existing mark → focus it
+      // Click on existing mark → show toolbar on it
       const mark = targetEl?.closest('mark[data-feedback-id]') as HTMLElement | null;
       if (mark && mark.dataset.feedbackId) {
-        setFocusedFeedbackId(mark.dataset.feedbackId);
+        const feedbackId = mark.dataset.feedbackId;
+        const item = feedbackItemsRef.current.find(f => f.id === feedbackId);
+        if (item) {
+          const markRect = mark.getBoundingClientRect();
+          const marginTop = marginColRef.current?.getBoundingClientRect().top ?? 0;
+          setPending({
+            selectedText: '',
+            charStart: item.charStart,
+            charLength: item.charLength,
+            mode: item.type === 'dislike' ? 'dislike' : item.type === 'like' ? 'like' : 'comment',
+            commentText: item.type === 'comment' ? (item.comment ?? '') : '',
+            anchorY: markRect.top - marginTop,
+          });
+          setToolbarPos({ x: markRect.right + 8, y: markRect.top + markRect.height / 2 });
+          setFocusedFeedbackId(feedbackId);
+        }
         return;
       }
 
@@ -863,15 +910,16 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
 
   // Compute margin note positions with collision avoidance
   const commentItems = feedbackItems.filter(f => f.type === 'comment' && f.anchorY !== undefined);
+  const reactionItems = feedbackItems.filter(f => (f.type === 'like' || f.type === 'dislike') && f.anchorY !== undefined);
   const resolvedMarginPositions = resolveMarginPositions(commentItems as Array<{ id: string; anchorY: number; comment?: string }>);
   const pendingNoteItem = pending?.mode === 'comment' ? pending : null;
 
-  // Update comment anchor positions based on rendered marks
+  // Update anchor positions for all feedback items (comments + likes/dislikes for margin faces)
   useLayoutEffect(() => {
     if (!contentRef.current || !marginColRef.current) return;
     const marginTop = marginColRef.current.getBoundingClientRect().top;
     setFeedbackItems(prev => prev.map(item => {
-      if (item.type !== 'comment') return item;
+      if (item.type !== 'comment' && item.type !== 'like' && item.type !== 'dislike') return item;
       const mark = contentRef.current!.querySelector(`mark[data-feedback-id="${item.id}"]`) as HTMLElement | null;
       if (!mark) return item;
       return { ...item, anchorY: mark.getBoundingClientRect().top - marginTop };
@@ -933,6 +981,22 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
             )}
           </TextColumn>
           <MarginColumn ref={marginColRef} data-margin-col="true">
+            {/* Reaction face icons in margin */}
+            {reactionItems.map(item => {
+              const t = faceTransform(item.id);
+              return (
+                <MarginFaceImg
+                  key={item.id}
+                  src={pickFace(item.type as 'like' | 'dislike', item.id)}
+                  alt={item.type === 'like' ? '😊' : '😕'}
+                  style={{
+                    top: Math.max(0, (item.anchorY ?? 0) + t.offsetY),
+                    left: `calc(0.25rem + ${t.offsetX}px)`,
+                    transform: `rotate(${t.rotation}deg)`,
+                  }}
+                />
+              );
+            })}
             {/* Pending margin note (streaming as user types) */}
             {pendingNoteItem && (
               <MarginNoteEl
@@ -997,17 +1061,28 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         <SelectionToolbar $x={toolbarPos.x} $y={toolbarPos.y}>
           <ToolbarBtn
             $active={pending.mode === 'like'}
-            onClick={() => { setPending(p => p ? { ...p, mode: 'like' } : p); }}
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => {
+              pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like' } : null;
+              setPending(p => p ? { ...p, mode: 'like' } : p);
+              submitPendingRef.current();
+            }}
           >
             👍
           </ToolbarBtn>
           <ToolbarBtn
             $active={pending.mode === 'dislike'}
-            onClick={() => { setPending(p => p ? { ...p, mode: 'dislike' } : p); }}
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => {
+              pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike' } : null;
+              setPending(p => p ? { ...p, mode: 'dislike' } : p);
+              submitPendingRef.current();
+            }}
           >
             👎
           </ToolbarBtn>
           <ToolbarBtn
+            onMouseDown={e => e.preventDefault()}
             onClick={() => enterSuggestionModeRef.current(pending.charStart, pending.charLength, pending.selectedText)}
           >
             ✎
