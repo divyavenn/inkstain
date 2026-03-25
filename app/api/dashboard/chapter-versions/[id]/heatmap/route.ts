@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
 import { isDashboardAuthed } from '@/lib/auth/dashboard';
-import { htmlToWords, wordRangeToCharPos } from '@/lib/db/wordPos';
+import { wordRangeToCharPos } from '@/lib/db/wordPos';
 import { resolveWordRange } from '@/lib/db/resolveWordRange';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -24,13 +24,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const chapterId = currentVer.chapter_id as string;
   const currentHtml = currentVer.rendered_html as string;
+  const wordCount = Number(currentVer.word_count);
 
   // Get all chapter versions for this chapter (for cross-version aggregation)
   const allVersions = await sql`
     SELECT cv.id, cv.version_number
     FROM chapter_versions cv
-    JOIN chapters c ON c.id = cv.chapter_id
-    WHERE c.id = ${chapterId}
+    WHERE cv.chapter_id = ${chapterId}
     ORDER BY cv.version_number
   `;
 
@@ -42,88 +42,108 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     WHERE cv.chapter_id = ${chapterId}
   `;
 
-  // Build per-word counts for the CURRENT version by aggregating across all versions
-  const wordCount = Number(currentVer.word_count);
-  const likeMap: Record<number, number> = {};
-  const dislikeMap: Record<number, number> = {};
-  const commentMap: Record<number, number> = {};
+  // ── Collect ranges: one entry per individual reaction/comment ─────────────
+
+  interface RawRange {
+    charStart: number;
+    charLength: number;
+    type: 'like' | 'dislike' | 'comment';
+    readerName: string | null;
+  }
+
+  const rawRanges: RawRange[] = [];
 
   for (const ver of allVersions) {
-    // Get reactions for this version (word-anchored only)
+    // Reactions with reader names
     const reactions = await sql`
-      SELECT word_start, word_end, reaction, COUNT(*) as cnt
-      FROM feedback_reactions
-      WHERE chapter_version_id = ${ver.id}
-        AND word_start IS NOT NULL AND word_end IS NOT NULL
-        ${readerProfileId ? sql`AND reader_profile_id = ${readerProfileId}` : sql``}
-        ${readerGroupId ? sql`AND reader_group_id = ${readerGroupId}` : sql``}
-        ${readerInviteId ? sql`AND reader_invite_id = ${readerInviteId}` : sql``}
-      GROUP BY word_start, word_end, reaction
+      SELECT fr.word_start, fr.word_end, fr.reaction,
+             rp.display_name as reader_name
+      FROM feedback_reactions fr
+      LEFT JOIN reader_profiles rp ON rp.id = fr.reader_profile_id
+      WHERE fr.chapter_version_id = ${ver.id}
+        AND fr.word_start IS NOT NULL AND fr.word_end IS NOT NULL
+        ${readerProfileId ? sql`AND fr.reader_profile_id = ${readerProfileId}` : sql``}
+        ${readerGroupId ? sql`AND fr.reader_group_id = ${readerGroupId}` : sql``}
+        ${readerInviteId ? sql`AND fr.reader_invite_id = ${readerInviteId}` : sql``}
     `;
 
     for (const r of reactions) {
-      // Map this version's word range to the current version
       const mapped = ver.id === chapterVersionId
         ? { wordStart: Number(r.word_start), wordEnd: Number(r.word_end) }
         : resolveWordRange(diffs as any[], ver.id as string, chapterVersionId, Number(r.word_start), Number(r.word_end));
-
       if (!mapped) continue;
+      if (mapped.wordStart < 0 || mapped.wordEnd >= wordCount) continue;
 
-      const cnt = Number(r.cnt);
-      for (let wi = mapped.wordStart; wi <= mapped.wordEnd; wi++) {
-        if (wi < 0 || wi >= wordCount) continue;
-        if (r.reaction === 'like') likeMap[wi] = (likeMap[wi] || 0) + cnt;
-        else dislikeMap[wi] = (dislikeMap[wi] || 0) + cnt;
-      }
+      const cp = wordRangeToCharPos(currentHtml, mapped.wordStart, mapped.wordEnd);
+      if (!cp) continue;
+
+      rawRanges.push({
+        charStart: cp.charStart,
+        charLength: cp.charLength,
+        type: r.reaction as 'like' | 'dislike',
+        readerName: r.reader_name as string | null,
+      });
     }
 
-    // Get comments for this version
+    // Comments with reader names
     const comments = await sql`
-      SELECT word_start, word_end, COUNT(*) as cnt
-      FROM feedback_comments
-      WHERE chapter_version_id = ${ver.id}
-        AND word_start IS NOT NULL AND word_end IS NOT NULL
-        ${readerProfileId ? sql`AND reader_profile_id = ${readerProfileId}` : sql``}
-        ${readerGroupId ? sql`AND reader_group_id = ${readerGroupId}` : sql``}
-        ${readerInviteId ? sql`AND reader_invite_id = ${readerInviteId}` : sql``}
-      GROUP BY word_start, word_end
+      SELECT fc.word_start, fc.word_end,
+             rp.display_name as reader_name
+      FROM feedback_comments fc
+      LEFT JOIN reader_profiles rp ON rp.id = fc.reader_profile_id
+      WHERE fc.chapter_version_id = ${ver.id}
+        AND fc.word_start IS NOT NULL AND fc.word_end IS NOT NULL
+        ${readerProfileId ? sql`AND fc.reader_profile_id = ${readerProfileId}` : sql``}
+        ${readerGroupId ? sql`AND fc.reader_group_id = ${readerGroupId}` : sql``}
+        ${readerInviteId ? sql`AND fc.reader_invite_id = ${readerInviteId}` : sql``}
     `;
 
     for (const c of comments) {
       const mapped = ver.id === chapterVersionId
         ? { wordStart: Number(c.word_start), wordEnd: Number(c.word_end) }
         : resolveWordRange(diffs as any[], ver.id as string, chapterVersionId, Number(c.word_start), Number(c.word_end));
-
       if (!mapped) continue;
+      if (mapped.wordStart < 0 || mapped.wordEnd >= wordCount) continue;
 
-      const cnt = Number(c.cnt);
-      for (let wi = mapped.wordStart; wi <= mapped.wordEnd; wi++) {
-        if (wi < 0 || wi >= wordCount) continue;
-        commentMap[wi] = (commentMap[wi] || 0) + cnt;
-      }
+      const cp = wordRangeToCharPos(currentHtml, mapped.wordStart, mapped.wordEnd);
+      if (!cp) continue;
+
+      rawRanges.push({
+        charStart: cp.charStart,
+        charLength: cp.charLength,
+        type: 'comment',
+        readerName: c.reader_name as string | null,
+      });
     }
   }
 
-  // Build per-word output with char positions for client-side rendering
-  const words = htmlToWords(currentHtml);
-  const wordData = words.map((word, wi) => {
-    const likes = likeMap[wi] || 0;
-    const dislikes = dislikeMap[wi] || 0;
-    const comments = commentMap[wi] || 0;
-    const cp = wordRangeToCharPos(currentHtml, wi, wi);
-    return {
-      wordIndex: wi,
-      word,
-      charStart: cp?.charStart ?? null,
-      charLength: cp?.charLength ?? null,
-      likeCount: likes,
-      dislikeCount: dislikes,
-      netScore: likes - dislikes,
-      commentCount: comments,
-    };
-  });
+  // ── Group identical ranges (same position + type) ────────────────────────
 
-  // Also return line-level data for reader reach (retention still line-based)
+  const groupKey = (r: RawRange) => `${r.charStart}:${r.charLength}:${r.type}`;
+  const grouped = new Map<string, { charStart: number; charLength: number; type: string; count: number; readerNames: string[] }>();
+  for (const r of rawRanges) {
+    const k = groupKey(r);
+    const existing = grouped.get(k);
+    if (existing) {
+      existing.count++;
+      if (r.readerName && !existing.readerNames.includes(r.readerName)) {
+        existing.readerNames.push(r.readerName);
+      }
+    } else {
+      grouped.set(k, {
+        charStart: r.charStart,
+        charLength: r.charLength,
+        type: r.type,
+        count: 1,
+        readerNames: r.readerName ? [r.readerName] : [],
+      });
+    }
+  }
+
+  const ranges = Array.from(grouped.values());
+
+  // ── Line-level data for reader reach (retention is still line-based) ─────
+
   const lines = await sql`
     SELECT line_number, line_text FROM chapter_version_lines
     WHERE chapter_version_id = ${chapterVersionId}
@@ -159,7 +179,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     };
   });
 
-  // Total reaction counts: direct count query (not per-word sums which overcounts spans)
+  // ── Total reaction counts for the stats header ───────────────────────────
+
   const reactionTotals = await sql`
     SELECT reaction, COUNT(*) as cnt
     FROM feedback_reactions
@@ -175,7 +196,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   return NextResponse.json({
     chapterVersionId,
-    words: wordData,
+    ranges,
     heatmap,
     totalReaders: totalReaderCount,
     totalLikes: likesTotal,

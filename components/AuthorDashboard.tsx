@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Chapter } from '@/types';
-import LikesHeatmapView, { HeatmapWord } from './LikesHeatmapView';
+import LikesHeatmapView, { HeatmapRange } from './LikesHeatmapView';
 import CommentsView from './CommentsView';
 import VersionTimeline from './VersionTimeline';
 
@@ -460,7 +460,7 @@ export default function AuthorDashboard() {
   const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
   const [, setPreComputeProgress] = useState(0);
   const [heatmapLines, setHeatmapLines] = useState<HeatmapLine[]>([]);
-  const [heatmapWords, setHeatmapWords] = useState<HeatmapWord[]>([]);
+  const [heatmapRanges, setHeatmapRanges] = useState<HeatmapRange[]>([]);
   const [totalLikes, setTotalLikes] = useState(0);
   const [totalDislikes, setTotalDislikes] = useState(0);
   const [dashComments, setDashComments] = useState<DashComment[]>([]);
@@ -535,7 +535,7 @@ export default function AuthorDashboard() {
         const data = await res.json();
         console.log('[dashboard] heatmap lines:', data.heatmap?.length, 'totalReaders:', data.totalReaders, 'reactions:', data.debug?.reactionRows, 'comments:', data.debug?.commentRows);
         setHeatmapLines(data.heatmap || []);
-        setHeatmapWords(data.words || []);
+        setHeatmapRanges(data.ranges || []);
         setTotalLikes(data.totalLikes ?? 0);
         setTotalDislikes(data.totalDislikes ?? 0);
       } else {
@@ -748,7 +748,7 @@ export default function AuthorDashboard() {
                           <LikesHeatmapView
                             chapterHtml={chapterHtml}
                             heatmapLines={heatmapLines}
-                            words={heatmapWords}
+                            ranges={heatmapRanges}
                           />
                         )}
                         {activeView === 'comments' && (

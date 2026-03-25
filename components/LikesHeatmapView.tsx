@@ -1,39 +1,30 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import ChapterText from './ChapterText';
 
-const Container = styled.div`
-  max-width: 42rem;
-  margin: 0 auto;
-`;
+/* ─── Types ───────────────────────────────────────────────────────────────── */
 
-const HeatmapChapterText = styled(ChapterText)`
-  .hw, .hw-gap {
-    padding: 0.1em 0;
-    transition: filter 0.12s ease;
-    cursor: default;
-  }
-  .hw:hover, .hw:hover + .hw-gap, .hw-gap:has(+ .hw:hover) {
-    filter: brightness(0.82);
-  }
-`;
+export interface HeatmapRange {
+  charStart: number;
+  charLength: number;
+  type: 'like' | 'dislike' | 'comment';
+  count: number;
+  readerNames: string[];
+}
 
-const Tooltip = styled.div.attrs<{ $x: number; $y: number }>(p => ({
-  style: { left: `${p.$x}px`, top: `${p.$y}px` },
-}))`
-  position: fixed;
-  background: rgba(0,0,0,0.9);
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  pointer-events: none;
-  z-index: 1000;
-  white-space: nowrap;
-`;
+// Kept for reader-reach data
+export interface HeatmapLine {
+  lineNumber: number;
+  lineText: string;
+  likeCount: number;
+  dislikeCount: number;
+  commentCount: number;
+  readerReachPercent: number;
+}
 
+// Backwards compat export (unused by new code)
 export interface HeatmapWord {
   wordIndex: number;
   word: string;
@@ -45,216 +36,290 @@ export interface HeatmapWord {
   commentCount: number;
 }
 
-// Keep backward compat with line-based shape still used for reader reach
-export interface HeatmapLine {
-  lineNumber: number;
-  lineText: string;
-  likeCount: number;
-  dislikeCount: number;
-  commentCount: number;
-  readerReachPercent: number;
+interface OverlayRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+  type: 'like' | 'dislike' | 'comment';
+  rangeIndex: number;
 }
+
+/* ─── Styled ──────────────────────────────────────────────────────────────── */
+
+const Container = styled.div`
+  max-width: 42rem;
+  margin: 0 auto;
+  position: relative;
+`;
+
+const TextLayer = styled.div`
+  position: relative;
+  z-index: 1;
+`;
+
+const OverlayLayer = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+`;
+
+const OVERLAY_ALPHA = 0.09;
+
+const OverlayRectDiv = styled.div<{ $type: string }>`
+  position: absolute;
+  border-radius: 3px;
+  pointer-events: none;
+  background-color: ${p =>
+    p.$type === 'like'    ? `rgba(80, 200, 80, ${OVERLAY_ALPHA})` :
+    p.$type === 'dislike' ? `rgba(200, 80, 80, ${OVERLAY_ALPHA})` :
+                            `rgba(100, 130, 255, ${OVERLAY_ALPHA})`};
+`;
+
+const Tooltip = styled.div.attrs<{ $x: number; $y: number }>(p => ({
+  style: { left: `${p.$x}px`, top: `${p.$y}px` },
+}))`
+  position: fixed;
+  background: rgba(0,0,0,0.92);
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 280px;
+`;
+
+/* ─── Helpers ─────────────────────────────────────────────────────────────── */
+
+interface TextNodeEntry {
+  node: Text;
+  start: number; // cumulative char offset
+  end: number;
+}
+
+function buildTextNodeMap(root: HTMLElement): TextNodeEntry[] {
+  const entries: TextNodeEntry[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let offset = 0;
+  let node: Text | null;
+  while ((node = walker.nextNode() as Text | null)) {
+    const len = (node.textContent || '').length;
+    entries.push({ node, start: offset, end: offset + len });
+    offset += len;
+  }
+  return entries;
+}
+
+function charRangeToDomRange(
+  map: TextNodeEntry[],
+  charStart: number,
+  charLength: number,
+): Range | null {
+  const charEnd = charStart + charLength;
+  let startNode: Text | null = null;
+  let startOffset = 0;
+  let endNode: Text | null = null;
+  let endOffset = 0;
+
+  for (const entry of map) {
+    if (!startNode && entry.end > charStart) {
+      startNode = entry.node;
+      startOffset = charStart - entry.start;
+    }
+    if (entry.end >= charEnd) {
+      endNode = entry.node;
+      endOffset = charEnd - entry.start;
+      break;
+    }
+  }
+
+  if (!startNode || !endNode) return null;
+
+  try {
+    const range = document.createRange();
+    range.setStart(startNode, Math.max(0, startOffset));
+    range.setEnd(endNode, Math.min(endOffset, (endNode.textContent || '').length));
+    return range;
+  } catch {
+    return null;
+  }
+}
+
+function getCaretCharOffset(map: TextNodeEntry[], x: number, y: number): number | null {
+  // Try standard caretRangeFromPoint first, then Firefox's caretPositionFromPoint
+  let node: Node | null = null;
+  let offset = 0;
+
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    if (range) { node = range.startContainer; offset = range.startOffset; }
+  } else if ((document as any).caretPositionFromPoint) {
+    const pos = (document as any).caretPositionFromPoint(x, y);
+    if (pos) { node = pos.offsetNode; offset = pos.offset; }
+  }
+
+  if (!node) return null;
+
+  // Find this text node in the map
+  for (const entry of map) {
+    if (entry.node === node || entry.node.parentNode === node) {
+      return entry.start + Math.min(offset, (entry.node.textContent || '').length);
+    }
+  }
+  return null;
+}
+
+/* ─── Component ───────────────────────────────────────────────────────────── */
 
 interface LikesHeatmapViewProps {
   chapterHtml: string;
   heatmapLines: HeatmapLine[];
-  words?: HeatmapWord[];
+  ranges?: HeatmapRange[];
 }
 
-function wordColor(netScore: number, maxAbs: number): string | null {
-  if (maxAbs === 0 || (netScore === 0)) return null;
-  const intensity = Math.abs(netScore) / maxAbs;
-  const a = Math.min(0.5, 0.06 + intensity * 0.44);
-  return netScore > 0
-    ? `rgba(80,200,80,${a.toFixed(2)})`
-    : `rgba(200,80,80,${a.toFixed(2)})`;
-}
+export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: LikesHeatmapViewProps) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [overlayRects, setOverlayRects] = useState<OverlayRect[]>([]);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; lines: string[] } | null>(null);
+  const textNodeMapRef = useRef<TextNodeEntry[]>([]);
+  const sortedRangesRef = useRef<HeatmapRange[]>([]);
 
-function extractAlpha(colorStr: string): number {
-  const m = colorStr.match(/[\d.]+(?=\))/);
-  return m ? parseFloat(m[0]) : 1;
-}
+  // Sort ranges by charStart for efficient binary search during hover
+  useEffect(() => {
+    sortedRangesRef.current = [...(ranges || [])].sort((a, b) => a.charStart - b.charStart);
+  }, [ranges]);
 
-// After inserting .hw spans, color the whitespace between consecutive highlighted
-// words and round only the outer edges of each run.
-function blendRunGaps(root: Element): void {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const gaps: Text[] = [];
-  let n: Text | null;
-  while ((n = walker.nextNode() as Text | null)) {
-    if (/^\s+$/.test(n.textContent ?? '')) gaps.push(n);
-  }
-
-  for (const gap of gaps) {
-    const prev = gap.previousSibling as HTMLElement | null;
-    const next = gap.nextSibling as HTMLElement | null;
-    if (
-      prev?.classList?.contains('hw') && prev.style.backgroundColor &&
-      next?.classList?.contains('hw') && next.style.backgroundColor
-    ) {
-      const span = document.createElement('span');
-      span.className = 'hw-gap';
-      span.textContent = gap.textContent;
-      // Use the dimmer (lower-alpha) of the two adjacent colors for the gap
-      span.style.backgroundColor =
-        extractAlpha(prev.style.backgroundColor) <= extractAlpha(next.style.backgroundColor)
-          ? prev.style.backgroundColor
-          : next.style.backgroundColor;
-      gap.parentNode!.replaceChild(span, gap);
+  // Compute overlay rects from ranges
+  const computeOverlays = useCallback(() => {
+    const el = textRef.current;
+    if (!el || !ranges || ranges.length === 0) {
+      setOverlayRects([]);
+      return;
     }
-  }
 
-  // Apply border-radius only at run boundaries
-  for (const el of Array.from(root.querySelectorAll('.hw')) as HTMLElement[]) {
-    const prev = el.previousSibling as HTMLElement | null;
-    const next = el.nextSibling as HTMLElement | null;
-    const hasLeft  = prev?.classList?.contains('hw-gap') || prev?.classList?.contains('hw');
-    const hasRight = next?.classList?.contains('hw-gap') || next?.classList?.contains('hw');
-    if (hasLeft && hasRight)       el.style.borderRadius = '0';
-    else if (hasLeft)              el.style.borderRadius = '0 3px 3px 0';
-    else if (hasRight)             el.style.borderRadius = '3px 0 0 3px';
-    else                           el.style.borderRadius = '3px';
-  }
-}
+    const map = buildTextNodeMap(el);
+    textNodeMapRef.current = map;
+    const containerRect = el.getBoundingClientRect();
+    const rects: OverlayRect[] = [];
 
-function applyWordHeatmap(html: string, words: HeatmapWord[]): string {
-  if (typeof window === 'undefined') return html;
+    for (let i = 0; i < ranges.length; i++) {
+      const r = ranges[i];
+      const domRange = charRangeToDomRange(map, r.charStart, r.charLength);
+      if (!domRange) continue;
 
-  const maxAbs = Math.max(...words.map(w => Math.abs(w.netScore)), 1);
-
-  const div = document.createElement('div');
-  div.innerHTML = html;
-
-  // Build a map of charStart → word data
-  const wordMap = new Map<number, HeatmapWord>();
-  for (const w of words) {
-    if (w.charStart != null && w.charLength != null && (w.likeCount + w.dislikeCount + w.commentCount > 0)) {
-      wordMap.set(w.charStart, w);
-    }
-  }
-
-  let charPos = 0;
-
-  const walk = (node: Node): void => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent || '';
-      const fragments: Node[] = [];
-      let localPos = 0;
-
-      // Split text into words and spaces, wrapping matching words
-      const parts = text.split(/(\s+)/);
-      for (const part of parts) {
-        const globalPos = charPos + localPos;
-        const wd = wordMap.get(globalPos);
-        if (wd && part.trim() && wd.charLength === part.length) {
-          const color = wordColor(wd.netScore, maxAbs);
-          const span = document.createElement('span');
-          span.className = 'hw';
-          span.textContent = part;
-          if (color) span.style.backgroundColor = color;
-          span.dataset.likes = String(wd.likeCount);
-          span.dataset.dislikes = String(wd.dislikeCount);
-          span.dataset.comments = String(wd.commentCount);
-          span.dataset.wordIndex = String(wd.wordIndex);
-          fragments.push(span);
-        } else {
-          fragments.push(document.createTextNode(part));
-        }
-        localPos += part.length;
-      }
-
-      if (fragments.length > 0 && fragments.some(f => f.nodeType !== Node.TEXT_NODE)) {
-        const parent = node.parentNode;
-        if (parent) {
-          for (const frag of fragments) {
-            parent.insertBefore(frag, node);
-          }
-          parent.removeChild(node);
-        }
-      }
-
-      charPos += text.length;
-    } else {
-      for (const child of Array.from(node.childNodes)) {
-        walk(child);
+      const clientRects = domRange.getClientRects();
+      for (const cr of clientRects) {
+        if (cr.width === 0 || cr.height === 0) continue;
+        rects.push({
+          top: cr.top - containerRect.top + el.scrollTop,
+          left: cr.left - containerRect.left + el.scrollLeft,
+          width: cr.width,
+          height: cr.height,
+          type: r.type,
+          rangeIndex: i,
+        });
       }
     }
-  };
 
-  walk(div);
-  blendRunGaps(div);
-  return div.innerHTML;
-}
+    setOverlayRects(rects);
+  }, [ranges]);
 
-function applyLineHeatmap(html: string, lines: HeatmapLine[]): string {
-  if (typeof window === 'undefined') return html;
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  const blocks = Array.from(div.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote'));
-  const contentLines = lines.filter(l => l.lineText.trim() !== '');
-  blocks.forEach((block, i) => {
-    const line = contentLines[i];
-    if (!line) return;
-    const el = block as HTMLElement;
-    el.classList.add('heatmap-block');
-    const total = line.likeCount + line.dislikeCount;
-    if (total > 0) {
-      const a = Math.min(0.28, 0.07 + total * 0.035);
-      const intensity = (line.likeCount - line.dislikeCount) / total;
-      const color = Math.abs(intensity) < 0.1
-        ? `rgba(140,140,140,${(a * 0.7).toFixed(2)})`
-        : intensity > 0 ? `rgba(34,197,94,${a.toFixed(2)})` : `rgba(239,68,68,${a.toFixed(2)})`;
-      el.style.backgroundColor = color;
-    }
-    el.dataset.likes = String(line.likeCount);
-    el.dataset.dislikes = String(line.dislikeCount);
-    el.dataset.comments = String(line.commentCount);
-  });
-  return div.innerHTML;
-}
+  // Recompute on mount, html change, or ranges change
+  useEffect(() => {
+    // Small delay to ensure the HTML is painted and fonts are loaded
+    const frame = requestAnimationFrame(() => {
+      document.fonts.ready.then(computeOverlays);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [chapterHtml, computeOverlays]);
 
-export default function LikesHeatmapView({ chapterHtml, heatmapLines, words }: LikesHeatmapViewProps) {
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
-
-  const processedHtml = useMemo(() => {
-    if (words && words.length > 0) {
-      return applyWordHeatmap(chapterHtml, words);
-    }
-    return applyLineHeatmap(chapterHtml, heatmapLines);
-  }, [chapterHtml, heatmapLines, words]);
-
-  const handleMouseOver = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    // For gap spans, use the nearest adjacent .hw sibling for data
-    let el: HTMLElement | null = target.closest('.hw') ?? target.closest('.heatmap-block');
-    if (!el && (target as HTMLElement).classList?.contains('hw-gap')) {
-      el = (target.previousSibling as HTMLElement | null)?.classList?.contains('hw')
-        ? target.previousSibling as HTMLElement
-        : target.nextSibling as HTMLElement | null;
-    }
+  // Recalculate on resize
+  useEffect(() => {
+    const el = textRef.current;
     if (!el) return;
+    const observer = new ResizeObserver(() => computeOverlays());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [computeOverlays]);
 
-    const likes = parseInt(el.dataset.likes || '0');
-    const dislikes = parseInt(el.dataset.dislikes || '0');
-    const comments = parseInt(el.dataset.comments || '0');
-    if (likes + dislikes + comments === 0) return;
+  // Hover: find ranges under cursor
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const map = textNodeMapRef.current;
+    if (map.length === 0 || !ranges || ranges.length === 0) return;
 
-    const parts: string[] = [];
-    if (likes > 0) parts.push(`${likes} like${likes !== 1 ? 's' : ''}`);
-    if (dislikes > 0) parts.push(`${dislikes} dislike${dislikes !== 1 ? 's' : ''}`);
-    if (comments > 0) parts.push(`${comments} comment${comments !== 1 ? 's' : ''}`);
-    setTooltip({ x: e.clientX + 10, y: e.clientY + 10, content: parts.join(', ') });
-  };
+    const charOffset = getCaretCharOffset(map, e.clientX, e.clientY);
+    if (charOffset === null) { setTooltip(null); return; }
 
-  const handleMouseOut = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('.hw') || target.closest('.heatmap-block') || target.classList?.contains('hw-gap')) setTooltip(null);
-  };
+    // Find all ranges containing this char offset
+    const sorted = sortedRangesRef.current;
+    const hits: HeatmapRange[] = [];
+    for (const r of sorted) {
+      if (r.charStart > charOffset) break; // sorted, no more matches possible
+      if (charOffset < r.charStart + r.charLength) {
+        hits.push(r);
+      }
+    }
+
+    if (hits.length === 0) { setTooltip(null); return; }
+
+    // Build tooltip lines grouped by type
+    const lines: string[] = [];
+    const likes = hits.filter(h => h.type === 'like');
+    const dislikes = hits.filter(h => h.type === 'dislike');
+    const comments = hits.filter(h => h.type === 'comment');
+
+    for (const { label, items } of [
+      { label: 'Liked by', items: likes },
+      { label: 'Disliked by', items: dislikes },
+      { label: 'Commented on by', items: comments },
+    ]) {
+      if (items.length === 0) continue;
+      const totalCount = items.reduce((s, i) => s + i.count, 0);
+      const names = [...new Set(items.flatMap(i => i.readerNames))];
+      if (names.length > 0) {
+        lines.push(`${label}: ${names.join(', ')} (${totalCount})`);
+      } else {
+        lines.push(`${totalCount} ${items[0].type}${totalCount !== 1 ? 's' : ''}`);
+      }
+    }
+
+    setTooltip({ x: e.clientX + 12, y: e.clientY + 12, lines });
+  }, [ranges]);
+
+  const handleMouseLeave = useCallback(() => setTooltip(null), []);
 
   return (
-    <Container>
-      <HeatmapChapterText html={processedHtml} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut} />
-      {tooltip && <Tooltip $x={tooltip.x} $y={tooltip.y}>{tooltip.content}</Tooltip>}
+    <Container onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+      <OverlayLayer>
+        {overlayRects.map((rect, i) => (
+          <OverlayRectDiv
+            key={i}
+            $type={rect.type}
+            style={{
+              top: rect.top,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            }}
+          />
+        ))}
+      </OverlayLayer>
+      <TextLayer ref={textRef}>
+        <ChapterText html={chapterHtml} />
+      </TextLayer>
+      {tooltip && (
+        <Tooltip $x={tooltip.x} $y={tooltip.y}>
+          {tooltip.lines.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </Tooltip>
+      )}
     </Container>
   );
 }
