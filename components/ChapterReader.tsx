@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const BLUE_INK = '#2b5797';
 const BLUE_INK_LIGHT = 'rgba(43,87,151,0.55)';
+const RED_INK = '#b92828';
 
 // Face SVGs from /public — randomly chosen per feedback item
 const GOOD_FACES = ['/good1.svg', '/good2.svg', '/good3.svg'];
@@ -45,7 +46,7 @@ const SURFACE_TEXTURE = css`
 const Paper = styled(motion.div)`
   padding: 4rem 2.5rem 6rem;
   width: 100%;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   position: relative;
 
@@ -61,7 +62,6 @@ const ContentRow = styled.div`
   align-items: flex-start;
 
   @media (max-width: 768px) {
-    flex-direction: column;
     gap: 0;
   }
 `;
@@ -76,6 +76,17 @@ const TextColumn = styled.div`
 `;
 
 const MarginColumn = styled.div`
+  width: 200px;
+  flex-shrink: 0;
+  position: relative;
+  align-self: stretch;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+const LeftMarginColumn = styled.div`
   width: 200px;
   flex-shrink: 0;
   position: relative;
@@ -104,6 +115,12 @@ const ChapterContent = styled.div`
 
   p { margin-bottom: 1.5rem; }
 
+  hr {
+    border: none;
+    border-top: 1px solid rgba(26, 26, 24, 0.18);
+    margin: 3rem -1rem;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-playfair), Georgia, serif;
     font-weight: 400;
@@ -120,6 +137,14 @@ const ChapterContent = styled.div`
     font-style: italic;
   }
 
+  @keyframes pendingPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  mark[data-pending] {
+    animation: pendingPulse 2s ease-in-out infinite;
+  }
+
   mark.highlight-like, mark.highlight-dislike {
     background: linear-gradient(to right, rgba(253,224,71,0.14), rgba(253,224,71,0.45) 4%, rgba(253,224,71,0.25));
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
@@ -131,51 +156,32 @@ const ChapterContent = styled.div`
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
   mark.highlight-suggestion {
-    background: linear-gradient(to right, rgba(253,224,71,0.1), rgba(253,224,71,0.3) 4%, rgba(253,224,71,0.15));
-    color: ${BLUE_INK};
-    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
+    background: none;
+    color: inherit;
+    padding: 0; margin: 0;
+    cursor: pointer;
+  }
+  mark.highlight-suggestion .suggestion-diff {
+    color: ${RED_INK};
   }
   mark.suggestion-editing {
     background: rgba(253,224,71,0.2);
-    color: ${BLUE_INK};
+    color: ${RED_INK};
     border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
-    outline: none; cursor: text; caret-color: ${BLUE_INK};
+    outline: none; cursor: text; caret-color: ${RED_INK};
   }
   mark.highlight-focused {
-    outline: none;
+    filter: saturate(1.2);
   }
   mark:hover { filter: brightness(0.88); }
+
+  @media (max-width: 768px) {
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 `;
 
-const SelectionToolbar = styled.div<{ $x: number; $y: number }>`
-  position: fixed;
-  left: ${p => p.$x}px;
-  top: ${p => p.$y}px;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: #1a1a18;
-  border-radius: 6px;
-  padding: 4px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-  z-index: 100;
-`;
-
-const ToolbarBtn = styled.button<{ $active?: boolean }>`
-  background: ${p => p.$active ? 'rgba(255,255,255,0.15)' : 'transparent'};
-  border: none;
-  color: #e8e4dc;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.72rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-  &:hover { background: rgba(255,255,255,0.12); }
-`;
 
 const EditHint = styled.div`
   font-family: var(--font-inter), system-ui, sans-serif;
@@ -185,24 +191,26 @@ const EditHint = styled.div`
   letter-spacing: 0.02em;
 `;
 
-const MarginNoteEl = styled.div<{ $isPending?: boolean }>`
+const MarginNoteEl = styled.div<{ $isPending?: boolean; $side?: 'left' | 'right' }>`
   position: absolute;
   width: 100%;
   font-family: var(--font-caveat), cursive;
   font-size: 1.4rem;
-  color: ${p => p.$isPending ? 'rgba(43,87,151,0.4)' : BLUE_INK};
+  color: ${BLUE_INK};
   line-height: 1.4;
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
-  padding-left: 0.5rem;
+  ${p => p.$side === 'left'
+    ? 'left: auto; right: -1.125rem;'
+    : 'left: -1.125rem;'}
 `;
 
 const MarginFaceImg = styled.img`
   position: absolute;
   width: 48px;
   height: 48px;
-  left: -2.75rem;
   pointer-events: none;
+  filter: brightness(0) saturate(100%) invert(25%) sepia(80%) saturate(600%) hue-rotate(197deg) brightness(95%) contrast(95%);
 `;
 
 const MarginNoteTextarea = styled.textarea`
@@ -221,7 +229,7 @@ const MarginNoteTextarea = styled.textarea`
 
 const SuccessToast = styled(motion.div)`
   position: fixed;
-  bottom: 2rem;
+  top: 2rem;
   right: 2rem;
   background: #1a1a18;
   color: #f2ede4;
@@ -233,8 +241,123 @@ const SuccessToast = styled(motion.div)`
   font-size: 0.875rem;
 `;
 
+const HelpButton = styled.button`
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(26,26,24,0.12);
+  background: rgba(252,252,252,0.85);
+  color: rgba(26,26,24,0.35);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: color 0.15s, border-color 0.15s;
+  &:hover { color: #1a1a18; border-color: rgba(26,26,24,0.3); }
+`;
+
+const HelpOverlay = styled(motion.div)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const HelpContent = styled(motion.div)`
+  background: #fcfcfc;
+  border-radius: 8px;
+  padding: 1.75rem 2rem;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.82rem;
+  color: #2a2a26;
+  line-height: 1.6;
+`;
+
+const ShortcutRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.2rem 0;
+`;
+
+const ShortcutKey = styled.span`
+  font-size: 0.72rem;
+  color: rgba(26,26,24,0.4);
+  background: rgba(26,26,24,0.05);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+`;
+
+const MobilePill = styled(motion.div)`
+  display: flex;
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  background: #1a1a18;
+  border-radius: 24px;
+  padding: 0.35rem;
+  gap: 2px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  z-index: 10000;
+  align-items: center;
+`;
+
+const PillBtn = styled.button<{ $active?: boolean }>`
+  background: ${p => p.$active ? 'rgba(255,255,255,0.15)' : 'transparent'};
+  border: none;
+  color: #e8e4dc;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  &:hover { background: rgba(255,255,255,0.12); }
+`;
+
+const PillInput = styled.input`
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #e8e4dc;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 1rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 16px;
+  outline: none;
+  width: 140px;
+  &::placeholder { color: rgba(232,228,220,0.35); }
+`;
+
+const DesktopHint = styled(motion.div)`
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.7rem;
+  color: rgba(26,26,24,0.35);
+  pointer-events: none;
+  z-index: 100;
+  white-space: nowrap;
+`;
+
 const ChapterNav = styled.div`
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem 2.5rem 4rem;
   display: flex;
@@ -288,6 +411,7 @@ interface PendingState {
   mode: PendingMode;
   commentText: string;
   anchorY: number; // px from top of margin column
+  side?: 'left' | 'right';
 }
 
 interface FeedbackItem {
@@ -298,6 +422,7 @@ interface FeedbackItem {
   comment?: string;      // for comment type: the note text
   anchorY?: number;      // for comment type: margin note position
   suggestedText?: string; // for suggestion type: what the user typed
+  side?: 'left' | 'right';
 }
 
 interface EditingNote {
@@ -350,12 +475,38 @@ function buildHighlightedHtml(
   ].sort((a, b) => a.charStart - b.charStart);
 
   for (const item of toRender) {
+    // For suggestions, extract original text before charWrap modifies the DOM
+    let diffInfo: ReturnType<typeof findMinimalDiff> = null;
+    if (item.suggestedText) {
+      const originalText = extractTextRange(div, item.charStart, item.charLength);
+      diffInfo = findMinimalDiff(originalText, item.suggestedText);
+    }
+
     charWrap(div, item.charStart, item.charLength, () => {
       const mark = document.createElement('mark');
       mark.className = item.cssClass + (item.id === focusedId ? ' highlight-focused' : '');
-      if (item.id !== '__pending__') mark.dataset.feedbackId = item.id;
+      if (item.id === '__pending__') mark.dataset.pending = '';
+      else mark.dataset.feedbackId = item.id;
       return mark;
     }, item.suggestedText);
+
+    // Post-process suggestion marks: only the diff portion is red
+    if (item.suggestedText && item.id !== '__pending__') {
+      const mark = div.querySelector(`mark[data-feedback-id="${item.id}"]`) as HTMLElement | null;
+      if (mark) {
+        const text = item.suggestedText;
+        if (diffInfo) {
+          mark.textContent = '';
+          mark.appendChild(document.createTextNode(text.slice(0, diffInfo.diffStart)));
+          const span = document.createElement('span');
+          span.className = 'suggestion-diff';
+          span.textContent = diffInfo.currentSpan;
+          mark.appendChild(span);
+          mark.appendChild(document.createTextNode(text.slice(diffInfo.diffStart + diffInfo.currentSpan.length)));
+        }
+        // If no diff (identical), leave as plain text — no red
+      }
+    }
   }
 
   // Inject an inline contentEditable mark for active suggestion editing
@@ -435,6 +586,33 @@ function charWrap(
   walk(div);
 }
 
+// Extract plain text at a char range from a DOM tree
+function extractTextRange(container: Node, charStart: number, length: number): string {
+  let result = '';
+  let charPos = 0;
+  const end = charStart + length;
+  const walk = (node: Node): boolean => {
+    if (charPos >= end) return true;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      const nodeEnd = charPos + text.length;
+      const overlapStart = Math.max(charPos, charStart);
+      const overlapEnd = Math.min(nodeEnd, end);
+      if (overlapStart < overlapEnd) {
+        result += text.slice(overlapStart - charPos, overlapEnd - charPos);
+      }
+      charPos += text.length;
+    } else {
+      for (const child of Array.from(node.childNodes)) {
+        if (walk(child)) return true;
+      }
+    }
+    return false;
+  };
+  walk(container);
+  return result;
+}
+
 // Find the minimal contiguous diff between two strings
 function findMinimalDiff(original: string, current: string): {
   originalSpan: string; currentSpan: string; diffStart: number;
@@ -460,13 +638,20 @@ function findMinimalDiff(original: string, current: string): {
   };
 }
 
-// Margin note collision avoidance
+// Margin layout collision avoidance (unified for faces + comments)
 const MARGIN_LINE_PX = 32;   // approx px per line at 1.4rem Caveat, line-height 1.4
 const MARGIN_CHARS_PER_LINE = 18; // approx chars fitting in margin column
-const MARGIN_NOTE_GAP = 8;   // min gap between adjacent notes
+const MARGIN_NOTE_GAP = 8;   // min gap between adjacent items
+const FACE_HEIGHT_PX = 48;
+
+function computeItemHeight(item: { type: string; comment?: string }): number {
+  if (item.type === 'like' || item.type === 'dislike') return FACE_HEIGHT_PX;
+  const lines = Math.max(1, Math.ceil((item.comment?.length ?? 3) / MARGIN_CHARS_PER_LINE));
+  return lines * MARGIN_LINE_PX;
+}
 
 function resolveMarginPositions(
-  items: Array<{ id: string; anchorY: number; comment?: string }>
+  items: Array<{ id: string; anchorY: number; heightPx: number }>
 ): Map<string, number> {
   const sorted = [...items].sort((a, b) => a.anchorY - b.anchorY);
   const result = new Map<string, number>();
@@ -474,10 +659,47 @@ function resolveMarginPositions(
   for (const item of sorted) {
     const y = Math.max(Math.max(0, item.anchorY), bottomY);
     result.set(item.id, y);
-    const lines = Math.max(1, Math.ceil((item.comment?.length ?? 3) / MARGIN_CHARS_PER_LINE));
-    bottomY = y + lines * MARGIN_LINE_PX + MARGIN_NOTE_GAP;
+    bottomY = y + item.heightPx + MARGIN_NOTE_GAP;
   }
   return result;
+}
+
+function countNearby(items: Array<{ anchorY: number }>, anchorY: number): number {
+  return items.filter(i => Math.abs(i.anchorY - anchorY) < 60).length;
+}
+
+function hasOverlap(items: Array<{ anchorY: number; heightPx: number }>, anchorY: number): boolean {
+  return items.some(i => anchorY >= i.anchorY && anchorY < i.anchorY + i.heightPx);
+}
+
+function assignSide(
+  selectionRect: { left: number; right: number },
+  textColumnRect: { left: number; right: number },
+  leftItems: Array<{ anchorY: number; heightPx: number }>,
+  rightItems: Array<{ anchorY: number; heightPx: number }>,
+  anchorY: number,
+): 'left' | 'right' {
+  const selCenter = (selectionRect.left + selectionRect.right) / 2;
+  const colCenter = (textColumnRect.left + textColumnRect.right) / 2;
+  const selWidth = selectionRect.right - selectionRect.left;
+  const colWidth = textColumnRect.right - textColumnRect.left;
+
+  // Wide selection (>70% of column) → pick less crowded side
+  if (selWidth / colWidth > 0.7) {
+    const leftCrowding = countNearby(leftItems, anchorY);
+    const rightCrowding = countNearby(rightItems, anchorY);
+    return leftCrowding <= rightCrowding ? 'left' : 'right';
+  }
+
+  const preferred: 'left' | 'right' = selCenter < colCenter ? 'left' : 'right';
+
+  // Check if preferred side has overlap; if so, try other side
+  const prefItems = preferred === 'left' ? leftItems : rightItems;
+  const altItems = preferred === 'left' ? rightItems : leftItems;
+  if (hasOverlap(prefItems, anchorY) && !hasOverlap(altItems, anchorY)) {
+    return preferred === 'left' ? 'right' : 'left';
+  }
+  return preferred;
 }
 
 export default function ChapterReader({ chapterId, sessionId, prefetchedData, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
@@ -490,11 +712,15 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   const [suggEditMeta, setSuggEditMeta] = useState<{ originalText: string; charStart: number; charLength: number } | null>(null);
   const [editingNote, setEditingNote] = useState<EditingNote | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const [toastMessage, setToastMessage] = useState('');
+  const [hasKeyboard, setHasKeyboard] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
+  const [mobileCommentMode, setMobileCommentMode] = useState(false);
+  const [mobileCommentText, setMobileCommentText] = useState('');
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const marginColRef = useRef<HTMLDivElement>(null);
+  const contentRowRef = useRef<HTMLDivElement>(null);
+  const textColRef = useRef<HTMLDivElement>(null);
   const scrollSentinelRef = useRef<HTMLDivElement>(null);
 
   // Refs so keydown handler (added once) can always read latest state
@@ -503,11 +729,53 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   const focusedIdRef = useRef(focusedFeedbackId);
   const chapterDataRef = useRef(chapterData);
   const feedbackItemsRef = useRef(feedbackItems);
-  useEffect(() => { pendingRef.current = pending; if (!pending) setToolbarPos(null); }, [pending]);
+  useEffect(() => {
+    pendingRef.current = pending;
+    if (!pending) {
+      setMobileCommentMode(false);
+      setMobileCommentText('');
+    }
+  }, [pending]);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   useEffect(() => { focusedIdRef.current = focusedFeedbackId; }, [focusedFeedbackId]);
   useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
   useEffect(() => { feedbackItemsRef.current = feedbackItems; }, [feedbackItems]);
+
+  // Detect whether the device has a physical keyboard.
+  // Start with media-query heuristic, then upgrade to keyboard on first
+  // keydown that isn't inside an input/textarea (rules out virtual keyboards).
+  useEffect(() => {
+    const touch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (touch) setHasKeyboard(false);
+
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !(e.target as HTMLElement).isContentEditable) {
+        setHasKeyboard(true);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Close help modal on Escape
+  useEffect(() => {
+    if (!showHelp) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowHelp(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showHelp]);
+
+  // Suppress native context menu on touch devices (prevents copy/paste toolbar over selections)
+  useEffect(() => {
+    if (!contentRef.current) return;
+    const el = contentRef.current;
+    const prevent = (e: Event) => {
+      if ('ontouchstart' in window) e.preventDefault();
+    };
+    el.addEventListener('contextmenu', prevent);
+    return () => el.removeEventListener('contextmenu', prevent);
+  }, []);
 
   // Update innerHTML whenever feedbackItems, pending, or focusedId change (not in edit mode)
   useEffect(() => {
@@ -606,6 +874,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       charLength: p.charLength,
       comment: p.mode === 'comment' ? p.commentText : undefined,
       anchorY: p.anchorY,
+      side: p.side,
     };
     setFeedbackItems(prev => [...prev, newItem]);
     setPending(null);
@@ -643,6 +912,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
 
     setFeedbackItems(prev => prev.filter(f => f.id !== id));
     setFocusedFeedbackId(null);
+    setPending(null);
 
     try {
       let url: string;
@@ -752,6 +1022,10 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   // Keydown handler — runs once, reads state via refs
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Don't intercept when typing in an input/textarea (e.g. mobile comment pill)
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
       const p = pendingRef.current;
       const em = editModeRef.current;
       const fid = focusedIdRef.current;
@@ -767,12 +1041,14 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         return;
       }
 
-      // Focused highlight: backspace = delete, escape = unfocus
-      if (fid && !p) {
-        if (e.key === 'Backspace') {
+      // Focused highlight: backspace/delete = delete, escape = unfocus
+      if (fid) {
+        if (e.key === 'Backspace' || e.key === 'Delete') {
           e.preventDefault();
+          setPending(null);
           deleteFeedbackRef.current(fid);
         } else if (e.key === 'Escape') {
+          setPending(null);
           setFocusedFeedbackId(null);
         }
         return;
@@ -846,8 +1122,15 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         const charEnd = getCharOffset(contentRef.current, range.endContainer, range.endOffset);
         const charLength = Math.max(0, charEnd - charStart);
 
-        const marginTop = marginColRef.current?.getBoundingClientRect().top ?? 0;
+        const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
         const anchorY = rect.top - marginTop;
+
+        // Compute side based on selection position
+        const textRect = textColRef.current?.getBoundingClientRect();
+        const items = feedbackItemsRef.current;
+        const lItems = items.filter(f => f.side === 'left' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+        const rItems = items.filter(f => f.side === 'right' && f.anchorY !== undefined).map(f => ({ anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+        const side = textRect ? assignSide(rect, textRect, lItems, rItems, anchorY) : 'right';
 
         setPending({
           selectedText: text,
@@ -856,26 +1139,34 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           mode: 'like',
           commentText: '',
           anchorY,
+          side,
         });
-        setToolbarPos({ x: rect.right + 8, y: rect.top + rect.height / 2 });
+
         setFocusedFeedbackId(null);
+
+        // On mobile, clear native selection to dismiss native toolbar
+        if ('ontouchstart' in window) {
+          setTimeout(() => window.getSelection()?.removeAllRanges(), 50);
+        }
         return;
       }
 
       // Click with no selection
       if (!selection?.isCollapsed) return;
 
-      // Don't re-trigger if we're in a feedback interaction
-      if (pendingRef.current) return;
-
-      // Click on existing mark → show toolbar on it
+      // Click on existing mark → show toolbar on it (before pending guard so re-clicks work)
       const mark = targetEl?.closest('mark[data-feedback-id]') as HTMLElement | null;
       if (mark && mark.dataset.feedbackId) {
         const feedbackId = mark.dataset.feedbackId;
         const item = feedbackItemsRef.current.find(f => f.id === feedbackId);
         if (item) {
           const markRect = mark.getBoundingClientRect();
-          const marginTop = marginColRef.current?.getBoundingClientRect().top ?? 0;
+          const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
+          // Use stored side, or compute from mark position
+          const textRect = textColRef.current?.getBoundingClientRect();
+          const markCenter = (markRect.left + markRect.right) / 2;
+          const colCenter = textRect ? (textRect.left + textRect.right) / 2 : markRect.left;
+          const side = item.side ?? (markCenter < colCenter ? 'left' : 'right');
           setPending({
             selectedText: '',
             charStart: item.charStart,
@@ -883,12 +1174,15 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
             mode: item.type === 'dislike' ? 'dislike' : item.type === 'like' ? 'like' : 'comment',
             commentText: item.type === 'comment' ? (item.comment ?? '') : '',
             anchorY: markRect.top - marginTop,
+            side,
           });
-          setToolbarPos({ x: markRect.right + 8, y: markRect.top + markRect.height / 2 });
           setFocusedFeedbackId(feedbackId);
         }
         return;
       }
+
+      // Don't re-trigger if we're in a feedback interaction
+      if (pendingRef.current) return;
 
       setFocusedFeedbackId(null);
     };
@@ -908,21 +1202,35 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
     return () => observer.disconnect();
   }, [nextChapterId, onNavigate]);
 
-  // Compute margin note positions with collision avoidance
-  const commentItems = feedbackItems.filter(f => f.type === 'comment' && f.anchorY !== undefined);
-  const reactionItems = feedbackItems.filter(f => (f.type === 'like' || f.type === 'dislike') && f.anchorY !== undefined);
-  const resolvedMarginPositions = resolveMarginPositions(commentItems as Array<{ id: string; anchorY: number; comment?: string }>);
-  const pendingNoteItem = pending?.mode === 'comment' ? pending : null;
+  // Compute margin note positions with collision avoidance (side-based)
+  // Default side to 'right' for items that haven't been assigned yet (before useLayoutEffect runs)
+  const marginItems = feedbackItems.filter(f =>
+    (f.type === 'comment' || f.type === 'like' || f.type === 'dislike') && f.anchorY !== undefined
+  );
+  const leftItems = marginItems.filter(f => f.side === 'left').map(f => ({ id: f.id, anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+  const rightItems = marginItems.filter(f => f.side !== 'left').map(f => ({ id: f.id, anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
+  const leftPositions = resolveMarginPositions(leftItems);
+  const rightPositions = resolveMarginPositions(rightItems);
+  const pendingNoteItem = pending ? pending : null;
 
   // Update anchor positions for all feedback items (comments + likes/dislikes for margin faces)
   useLayoutEffect(() => {
-    if (!contentRef.current || !marginColRef.current) return;
-    const marginTop = marginColRef.current.getBoundingClientRect().top;
+    if (!contentRef.current || !contentRowRef.current) return;
+    const marginTop = contentRowRef.current.getBoundingClientRect().top;
+    const textRect = textColRef.current?.getBoundingClientRect();
     setFeedbackItems(prev => prev.map(item => {
       if (item.type !== 'comment' && item.type !== 'like' && item.type !== 'dislike') return item;
       const mark = contentRef.current!.querySelector(`mark[data-feedback-id="${item.id}"]`) as HTMLElement | null;
       if (!mark) return item;
-      return { ...item, anchorY: mark.getBoundingClientRect().top - marginTop };
+      const markRect = mark.getBoundingClientRect();
+      const anchorY = markRect.top - marginTop;
+      // Compute side for items that don't have one yet (loaded from server)
+      if (!item.side && textRect) {
+        const markCenter = (markRect.left + markRect.right) / 2;
+        const colCenter = (textRect.left + textRect.right) / 2;
+        return { ...item, anchorY, side: markCenter < colCenter ? 'left' as const : 'right' as const };
+      }
+      return { ...item, anchorY };
     }));
   }, [feedbackItems.map(f => f.id).join(','), editMode]);
 
@@ -962,56 +1270,82 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
 
   return (
     <>
+      <HelpButton onClick={() => setShowHelp(true)}>?</HelpButton>
+
+      <AnimatePresence>
+        {showHelp && (
+          <HelpOverlay
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowHelp(false)}
+          >
+            <HelpContent
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.75rem', color: '#1a1a18' }}>
+                How to annotate
+              </div>
+              <div style={{ fontSize: '0.78rem', color: 'rgba(26,26,24,0.45)', marginBottom: '1rem' }}>
+                Select any text to begin
+              </div>
+              {hasKeyboard ? (
+                <>
+                  <ShortcutRow><span>toggle like / dislike</span><ShortcutKey>← → ↑ ↓</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>suggest an edit</span><ShortcutKey>Tab</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>write a comment</span><ShortcutKey>start typing</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>submit</span><ShortcutKey>Enter</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>delete</span><ShortcutKey>Backspace</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>cancel</span><ShortcutKey>Esc</ShortcutKey></ShortcutRow>
+                </>
+              ) : (
+                <>
+                  <ShortcutRow><span>like / dislike</span><ShortcutKey>tap button</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>suggest an edit</span><ShortcutKey>edit</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>write a comment</span><ShortcutKey>note</ShortcutKey></ShortcutRow>
+                  <ShortcutRow><span>re-open toolbar</span><ShortcutKey>tap highlight</ShortcutKey></ShortcutRow>
+                </>
+              )}
+            </HelpContent>
+          </HelpOverlay>
+        )}
+      </AnimatePresence>
+
       <Paper
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -16 }}
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        <ContentRow>
-          <TextColumn>
-            <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
-            <ChapterContent
-              ref={contentRef}
-              data-chapter-content="true"
-              // innerHTML is managed by useEffect, not dangerouslySetInnerHTML
-            />
-            {editMode && (
-              <EditHint>type your edit · ↵ propose · esc cancel</EditHint>
-            )}
-          </TextColumn>
-          <MarginColumn ref={marginColRef} data-margin-col="true">
-            {/* Reaction face icons in margin */}
-            {reactionItems.map(item => {
-              const t = faceTransform(item.id);
+        <ContentRow ref={contentRowRef}>
+          <LeftMarginColumn data-margin-col="true">
+            {/* Left-side reaction faces */}
+            {marginItems.filter(f => f.side === 'left' && (f.type === 'like' || f.type === 'dislike')).map(item => {
+              const faceSeed = `${item.charStart}_${item.charLength}`;
+              const t = faceTransform(faceSeed);
               return (
                 <MarginFaceImg
                   key={item.id}
-                  src={pickFace(item.type as 'like' | 'dislike', item.id)}
+                  src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
                   alt={item.type === 'like' ? '😊' : '😕'}
                   style={{
-                    top: Math.max(0, (item.anchorY ?? 0) + t.offsetY),
-                    left: `calc(-2.75rem + ${t.offsetX}px)`,
+                    top: (leftPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0)) + t.offsetY,
+                    right: `calc(-2.75rem + ${t.offsetX}px)`,
                     transform: `rotate(${t.rotation}deg)`,
                   }}
                 />
               );
             })}
-            {/* Pending margin note (streaming as user types) */}
-            {pendingNoteItem && (
-              <MarginNoteEl
-                $isPending
-                style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
-              >
-                {pendingNoteItem.commentText || '…'}
-              </MarginNoteEl>
-            )}
-            {/* Persisted comment notes */}
-            {commentItems.map(item => (
+            {/* Left-side comment notes */}
+            {marginItems.filter(f => f.side === 'left' && f.type === 'comment').map(item => (
               <MarginNoteEl
                 key={item.id}
                 $isPending={false}
-                style={{ top: resolvedMarginPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0) }}
+                $side="left"
+                style={{ top: leftPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0) }}
                 onClick={() => {
                   if (editingNote?.itemId !== item.id) {
                     setEditingNote({ itemId: item.id, text: item.comment ?? '' });
@@ -1041,6 +1375,128 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
                 )}
               </MarginNoteEl>
             ))}
+            {/* Left-side pending annotation */}
+            {pendingNoteItem && pendingNoteItem.side === 'left' && !focusedFeedbackId && (
+              pendingNoteItem.mode === 'comment' ? (
+                <MarginNoteEl
+                  $isPending
+                  $side="left"
+                  style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
+                >
+                  {pendingNoteItem.commentText || '…'}
+                </MarginNoteEl>
+              ) : (
+                (() => {
+                  const faceSeed = `${pendingNoteItem.charStart}_${pendingNoteItem.charLength}`;
+                  const t = faceTransform(faceSeed);
+                  return (
+                    <MarginFaceImg
+                      src={pickFace(pendingNoteItem.mode as 'like' | 'dislike', faceSeed)}
+                      alt={pendingNoteItem.mode === 'like' ? '😊' : '😕'}
+                      style={{
+                        top: Math.max(0, pendingNoteItem.anchorY) + t.offsetY,
+                        right: `calc(-2.75rem + ${t.offsetX}px)`,
+                        transform: `rotate(${t.rotation}deg)`,
+                      }}
+                    />
+                  );
+                })()
+              )
+            )}
+          </LeftMarginColumn>
+          <TextColumn ref={textColRef}>
+            <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
+            <ChapterContent
+              ref={contentRef}
+              data-chapter-content="true"
+              // innerHTML is managed by useEffect, not dangerouslySetInnerHTML
+            />
+            {editMode && hasKeyboard && (
+              <EditHint>type your edit · ↵ propose · esc cancel</EditHint>
+            )}
+          </TextColumn>
+          <MarginColumn data-margin-col="true">
+            {/* Right-side reaction faces (default for items without side) */}
+            {marginItems.filter(f => f.side !== 'left' && (f.type === 'like' || f.type === 'dislike')).map(item => {
+              const faceSeed = `${item.charStart}_${item.charLength}`;
+              const t = faceTransform(faceSeed);
+              return (
+                <MarginFaceImg
+                  key={item.id}
+                  src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
+                  alt={item.type === 'like' ? '😊' : '😕'}
+                  style={{
+                    top: (rightPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0)) + t.offsetY,
+                    left: `calc(-2.75rem + ${t.offsetX}px)`,
+                    transform: `rotate(${t.rotation}deg)`,
+                  }}
+                />
+              );
+            })}
+            {/* Right-side comment notes */}
+            {marginItems.filter(f => f.side !== 'left' && f.type === 'comment').map(item => (
+              <MarginNoteEl
+                key={item.id}
+                $isPending={false}
+                $side="right"
+                style={{ top: rightPositions.get(item.id) ?? Math.max(0, item.anchorY ?? 0) }}
+                onClick={() => {
+                  if (editingNote?.itemId !== item.id) {
+                    setEditingNote({ itemId: item.id, text: item.comment ?? '' });
+                  }
+                }}
+              >
+                {editingNote?.itemId === item.id ? (
+                  <MarginNoteTextarea
+                    autoFocus
+                    value={editingNote.text}
+                    onChange={e => setEditingNote({ ...editingNote, text: e.target.value })}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        updateNoteText(item.id, editingNote.text);
+                      } else if (e.key === 'Escape') {
+                        setEditingNote(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editingNote) updateNoteText(item.id, editingNote.text);
+                    }}
+                    rows={3}
+                  />
+                ) : (
+                  item.comment
+                )}
+              </MarginNoteEl>
+            ))}
+            {/* Right-side pending annotation */}
+            {pendingNoteItem && pendingNoteItem.side !== 'left' && !focusedFeedbackId && (
+              pendingNoteItem.mode === 'comment' ? (
+                <MarginNoteEl
+                  $isPending
+                  $side="right"
+                  style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
+                >
+                  {pendingNoteItem.commentText || '…'}
+                </MarginNoteEl>
+              ) : (
+                (() => {
+                  const faceSeed = `${pendingNoteItem.charStart}_${pendingNoteItem.charLength}`;
+                  const t = faceTransform(faceSeed);
+                  return (
+                    <MarginFaceImg
+                      src={pickFace(pendingNoteItem.mode as 'like' | 'dislike', faceSeed)}
+                      alt={pendingNoteItem.mode === 'like' ? '😊' : '😕'}
+                      style={{
+                        top: Math.max(0, pendingNoteItem.anchorY) + t.offsetY,
+                        left: `calc(-2.75rem + ${t.offsetX}px)`,
+                        transform: `rotate(${t.rotation}deg)`,
+                      }}
+                    />
+                  );
+                })()
+              )
+            )}
           </MarginColumn>
         </ContentRow>
       </Paper>
@@ -1056,39 +1512,87 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
 
       <div ref={scrollSentinelRef} style={{ height: 1 }} />
 
-      {/* Selection toolbar: like / dislike / edit */}
-      {pending && toolbarPos && !editMode && pending.commentText.length === 0 && (
-        <SelectionToolbar $x={toolbarPos.x} $y={toolbarPos.y}>
-          <ToolbarBtn
-            $active={pending.mode === 'like'}
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => {
-              pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like' } : null;
-              setPending(p => p ? { ...p, mode: 'like' } : p);
-              submitPendingRef.current();
-            }}
+
+      {/* Floating pill: touch/no-keyboard devices only */}
+      <AnimatePresence>
+        {!hasKeyboard && pending && !editMode && (
+          <MobilePill
+            initial={{ opacity: 0, y: 20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
           >
-            👍
-          </ToolbarBtn>
-          <ToolbarBtn
-            $active={pending.mode === 'dislike'}
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => {
-              pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike' } : null;
-              setPending(p => p ? { ...p, mode: 'dislike' } : p);
-              submitPendingRef.current();
-            }}
+            {mobileCommentMode ? (
+              <>
+                <PillInput
+                  autoFocus
+                  placeholder="comment..."
+                  value={mobileCommentText}
+                  onChange={e => setMobileCommentText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && mobileCommentText.trim()) {
+                      e.preventDefault();
+                      pendingRef.current = pendingRef.current
+                        ? { ...pendingRef.current, mode: 'comment', commentText: mobileCommentText.trim() }
+                        : null;
+                      submitPendingRef.current();
+                    }
+                  }}
+                />
+                <PillBtn onClick={() => {
+                  if (!mobileCommentText.trim()) return;
+                  pendingRef.current = pendingRef.current
+                    ? { ...pendingRef.current, mode: 'comment', commentText: mobileCommentText.trim() }
+                    : null;
+                  submitPendingRef.current();
+                }}>send</PillBtn>
+                <PillBtn onClick={() => { setMobileCommentMode(false); setMobileCommentText(''); }}>✕</PillBtn>
+              </>
+            ) : (
+              <>
+                <PillBtn
+                  $active={pending.mode === 'like'}
+                  onClick={() => {
+                    pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like' } : null;
+                    setPending(p => p ? { ...p, mode: 'like' } : p);
+                    submitPendingRef.current();
+                  }}
+                >like</PillBtn>
+                <PillBtn
+                  $active={pending.mode === 'dislike'}
+                  onClick={() => {
+                    pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike' } : null;
+                    setPending(p => p ? { ...p, mode: 'dislike' } : p);
+                    submitPendingRef.current();
+                  }}
+                >dislike</PillBtn>
+                <PillBtn onClick={() => enterSuggestionModeRef.current(pending.charStart, pending.charLength, pending.selectedText)}>edit</PillBtn>
+                <PillBtn onClick={() => { setMobileCommentMode(true); setMobileCommentText(''); }}>note</PillBtn>
+                {focusedFeedbackId ? (
+                  <PillBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</PillBtn>
+                ) : (
+                  <PillBtn onClick={() => setPending(null)}>✕</PillBtn>
+                )}
+              </>
+            )}
+          </MobilePill>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop hint bar */}
+      <AnimatePresence>
+        {hasKeyboard && pending && !editMode && (
+          <DesktopHint
+            key="desktop-hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            👎
-          </ToolbarBtn>
-          <ToolbarBtn
-            onMouseDown={e => e.preventDefault()}
-            onClick={() => enterSuggestionModeRef.current(pending.charStart, pending.charLength, pending.selectedText)}
-          >
-            ✎
-          </ToolbarBtn>
-        </SelectionToolbar>
-      )}
+            {pending.mode === 'comment'
+              ? '↵ submit · esc cancel · ⌫ delete char'
+              : '↑↓ toggle · type to note · tab to edit · ↵ submit · esc cancel'}
+          </DesktopHint>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showSuccessToast && (

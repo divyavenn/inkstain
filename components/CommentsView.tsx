@@ -316,6 +316,34 @@ function processHtml(
     });
   }
 
+  // Highlight marks for suggestions (so hover-scroll can find them)
+  for (const s of suggestions) {
+    if (s.char_start == null || s.char_length == null) continue;
+    // Skip if this is the preview suggestion — it gets its own special rendering below
+    if (s.id === previewSuggId) continue;
+
+    let op: number;
+    if (hoveredPanelId !== null) {
+      op = s.id === hoveredPanelId ? 0.85 : 0;
+    } else if (pinnedItemIds !== null) {
+      op = pinnedItemIds.includes(s.id) ? 0.85 : 0.3;
+    } else if (hoveredMarkIds.length > 0) {
+      op = hoveredMarkIds.includes(s.id) ? 0.85 : 0.3;
+    } else {
+      op = 0.55;
+    }
+
+    if (op === 0) continue;
+
+    charWrap(div, s.char_start, s.char_length, () => {
+      const mark = document.createElement('mark');
+      mark.className = 'line-highlight feedback-block';
+      mark.style.backgroundImage = gradient(op);
+      mark.dataset.itemIds = s.id;
+      return mark;
+    });
+  }
+
   // Inline edit preview: same charWrap mechanism
   if (previewSuggId !== null) {
     const s = suggestions.find(s => s.id === previewSuggId);
@@ -332,8 +360,9 @@ function processHtml(
         let first = true;
         charWrap(div, idx, len, () => {
           const span = document.createElement('span');
+          span.dataset.itemIds = previewSuggId;
           if (first) {
-            span.className = 'suggestion-preview';
+            span.className = 'suggestion-preview feedback-block';
             span.textContent = s.suggested_text;
             first = false;
           } else {
