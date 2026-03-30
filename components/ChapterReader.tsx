@@ -234,8 +234,11 @@ const SuccessToast = styled(motion.div)`
   background: #1a1a18;
   color: #f2ede4;
   padding: 0.75rem 1.25rem;
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(26, 26, 24, 0.2);
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(26, 26, 24, 0.08),
+    0 2px 4px rgba(26, 26, 24, 0.08),
+    0 8px 24px rgba(26, 26, 24, 0.16);
   z-index: 10000;
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.875rem;
@@ -260,8 +263,11 @@ const HelpButton = styled.button`
   align-items: center;
   justify-content: center;
   backdrop-filter: blur(4px);
-  transition: color 0.15s, border-color 0.15s;
+  transition-property: color, border-color, scale;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
   &:hover { color: #1a1a18; border-color: rgba(26,26,24,0.3); }
+  &:active { scale: 0.96; }
 `;
 
 const HelpOverlay = styled(motion.div)`
@@ -276,11 +282,14 @@ const HelpOverlay = styled(motion.div)`
 
 const HelpContent = styled(motion.div)`
   background: #fcfcfc;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 1.75rem 2rem;
   max-width: 320px;
   width: 90%;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.03),
+    0 2px 4px rgba(0,0,0,0.04),
+    0 8px 32px rgba(0,0,0,0.12);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.82rem;
   color: #2a2a26;
@@ -327,7 +336,11 @@ const PillBtn = styled.button<{ $active?: boolean }>`
   border-radius: 20px;
   cursor: pointer;
   white-space: nowrap;
+  transition-property: background, scale;
+  transition-duration: 0.12s;
+  transition-timing-function: ease;
   &:hover { background: rgba(255,255,255,0.12); }
+  &:active { scale: 0.96; }
 `;
 
 const PillInput = styled.input`
@@ -380,8 +393,11 @@ const NavButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: color 0.15s ease;
+  transition-property: color, scale;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
   &:hover { color: #1a1a18; }
+  &:active { scale: 0.96; }
 `;
 
 interface ChapterReaderProps {
@@ -1318,9 +1334,9 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
             onClick={() => setShowHelp(false)}
           >
             <HelpContent
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.75rem', color: '#1a1a18' }}>
@@ -1558,7 +1574,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           <MobilePill
             initial={{ opacity: 0, y: 20, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            exit={{ opacity: 0, y: 8, x: '-50%', transition: { duration: 0.15 } }}
           >
             {mobileCommentMode ? (
               <>
@@ -1633,12 +1649,12 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
+      <AnimatePresence initial={false}>
         {showSuccessToast && (
           <SuccessToast
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
+            exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
           >
             {toastMessage}
           </SuccessToast>

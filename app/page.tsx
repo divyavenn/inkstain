@@ -2,7 +2,17 @@
 
 import Link from 'next/link';
 import styled from 'styled-components';
+import { motion } from 'framer-motion';
 import Highlighter from '@/components/Highlighter';
+
+const stagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1 } },
+};
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] } },
+};
 
 const Page = styled.div`
   min-height: 100vh;
@@ -29,11 +39,6 @@ const Layout = styled.div`
   }
 `;
 
-const Left = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-`;
 
 const Headline = styled.h1`
   font-family: var(--font-playfair), Georgia, serif;
@@ -73,10 +78,15 @@ const PrimaryButton = styled(Link)`
   font-size: 1.05rem;
   letter-spacing: 0.01em;
   border-radius: 4px;
-  transition: background 0.15s ease;
+  transition-property: background, scale;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
 
   &:hover {
     background: #333330;
+  }
+  &:active {
+    scale: 0.96;
   }
 `;
 
@@ -90,10 +100,15 @@ const SecondaryButton = styled(Link)`
   letter-spacing: 0.01em;
   border: 1.5px solid #1a1a18;
   border-radius: 4px;
-  transition: background 0.15s ease;
+  transition-property: background, scale;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
 
   &:hover {
     background: rgba(26, 26, 24, 0.06);
+  }
+  &:active {
+    scale: 0.96;
   }
 `;
 
@@ -102,7 +117,18 @@ const Specs = styled.div`
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem 3rem;
   padding-top: 1.5rem;
-  border-top: 1px solid rgba(26, 26, 24, 0.15);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, rgba(26, 26, 24, 0.08), rgba(26, 26, 24, 0.12), rgba(26, 26, 24, 0.04));
+    box-shadow: 0 1px 2px rgba(26, 26, 24, 0.04);
+  }
 `;
 
 const Spec = styled.div`
@@ -177,57 +203,71 @@ export default function Home() {
   return (
     <Page>
       <Layout>
-        <Left>
-          <Headline>
-            Introducing
-            <em>Inklink.</em>
-          </Headline>
+        <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <motion.div variants={fadeUp}>
+            <Headline>
+              Introducing
+              <em>Inklink.</em>
+            </Headline>
+          </motion.div>
 
-          <Body>
-            Inklink makes collecting reader feedback as easy as sharing a link. We track word-level reactions, retention rates, and email addresses from interested readers, 
-            and show you exactly where and how your writing hits (and where it doesn't).
-          </Body>
+          <motion.div variants={fadeUp}>
+            <Body>
+              Inklink makes collecting reader feedback as easy as sharing a link. We track word-level reactions, retention rates, and email addresses from interested readers,
+              and show you exactly where and how your writing hits (and where it doesn't).
+            </Body>
+          </motion.div>
 
-          <CTARow>
-            <PrimaryButton href="/read">Start Reading</PrimaryButton>
-            <SecondaryButton href="/admin">Author Dashboard</SecondaryButton>
-          </CTARow>
+          <motion.div variants={fadeUp}>
+            <CTARow>
+              <PrimaryButton href="/read">Start Reading</PrimaryButton>
+              <SecondaryButton href="/admin">Author Dashboard</SecondaryButton>
+            </CTARow>
+          </motion.div>
 
-          <Specs>
-            <Spec>
-              <SpecLabel>Feedback</SpecLabel>
-              <SpecValue>Word-level precision</SpecValue>
-            </Spec>
-            <Spec>
-              <SpecLabel>Versions</SpecLabel>
-              <SpecValue>Git-backed history</SpecValue>
-            </Spec>
-            <Spec>
-              <SpecLabel>Reactions</SpecLabel>
-              <SpecValue>Likes & inline edits</SpecValue>
-            </Spec>
-            <Spec>
-              <SpecLabel>Interface</SpecLabel>
-              <SpecValue>Distraction-free</SpecValue>
-            </Spec>
-          </Specs>
-        </Left>
+          <motion.div variants={fadeUp}>
+            <Specs>
+              <Spec>
+                <SpecLabel>Feedback</SpecLabel>
+                <SpecValue>Word-level precision</SpecValue>
+              </Spec>
+              <Spec>
+                <SpecLabel>Versions</SpecLabel>
+                <SpecValue>Git-backed history</SpecValue>
+              </Spec>
+              <Spec>
+                <SpecLabel>Reactions</SpecLabel>
+                <SpecValue>Likes & inline edits</SpecValue>
+              </Spec>
+              <Spec>
+                <SpecLabel>Interface</SpecLabel>
+                <SpecValue>Distraction-free</SpecValue>
+              </Spec>
+            </Specs>
+          </motion.div>
+        </motion.div>
 
         <Right>
-          <BookPreview>
-            <BookMeta>Chapter 1 — Draft</BookMeta>
-            <BookBody>
-              The morning light came through the curtains in{' '}
-              <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>thin, pale ribbons</Highlighter> — the kind that
-              make dust look deliberate. She sat at the table with her coffee,
-              watching the steam rise and curl and{' '}
-              <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>disappear into nothing</Highlighter>, which
-              seemed, at the time, like a kind of answer.
-            </BookBody>
-            <BookTitle>
-              Something<br />Worth Saying
-            </BookTitle>
-          </BookPreview>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <BookPreview>
+              <BookMeta>Chapter 1 — Draft</BookMeta>
+              <BookBody>
+                The morning light came through the curtains in{' '}
+                <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>thin, pale ribbons</Highlighter> — the kind that
+                make dust look deliberate. She sat at the table with her coffee,
+                watching the steam rise and curl and{' '}
+                <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>disappear into nothing</Highlighter>, which
+                seemed, at the time, like a kind of answer.
+              </BookBody>
+              <BookTitle>
+                Something<br />Worth Saying
+              </BookTitle>
+            </BookPreview>
+          </motion.div>
         </Right>
       </Layout>
     </Page>

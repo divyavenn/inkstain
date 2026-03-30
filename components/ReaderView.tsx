@@ -37,8 +37,10 @@ const ChaptersSidebar = styled(motion.aside)`
   height: 100vh;
   width: 220px;
   ${SURFACE_TEXTURE}
-  border-right: 1px solid rgba(26,26,24,0.08);
-  box-shadow: 4px 0 24px rgba(26,26,24,0.08);
+  box-shadow:
+    1px 0 0 rgba(26,26,24,0.04),
+    4px 0 12px rgba(26,26,24,0.06),
+    8px 0 32px rgba(26,26,24,0.08);
   z-index: 199;
   display: flex;
   flex-direction: column;
@@ -66,7 +68,9 @@ const ChapterList = styled.ul`
 const ChapterItem = styled.li<{ $active: boolean }>`
   padding: 0.5rem 1.5rem;
   cursor: pointer;
-  transition: background 0.12s ease;
+  transition-property: background;
+  transition-duration: 0.12s;
+  transition-timing-function: ease;
   border-right: 2px solid ${p => p.$active ? '#b94a36' : 'transparent'};
 
   &:hover {
