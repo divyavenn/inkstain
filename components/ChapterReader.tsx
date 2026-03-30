@@ -165,9 +165,9 @@ const ChapterContent = styled.div`
     color: ${RED_INK};
   }
   mark.suggestion-editing {
-    background: rgba(253,224,71,0.2);
+    background: none;
     color: ${RED_INK};
-    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    padding: 0; margin: 0;
     -webkit-box-decoration-break: clone; box-decoration-break: clone;
     outline: none; cursor: text; caret-color: ${RED_INK};
   }
@@ -1203,7 +1203,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       // Click with no selection
       if (!selection?.isCollapsed) return;
 
-      // Click on existing mark → show toolbar on it (before pending guard so re-clicks work)
+      // Click on existing mark → suggestions delete directly, others focus
       const mark = targetEl?.closest('mark[data-feedback-id]') as HTMLElement | null;
       if (mark && mark.dataset.feedbackId) {
         focusOnItem(mark.dataset.feedbackId);

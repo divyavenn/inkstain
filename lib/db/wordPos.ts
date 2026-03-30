@@ -29,7 +29,7 @@ export function feedbackWordPos(
   selectedText: string,
 ): { wordStart: number; wordEnd: number } | null {
   const words = htmlToWords(renderedHtml);
-  const needle = normalizeQuotes(selectedText.trim());
+  const needle = normalizeQuotes(selectedText.trim().replace(/\s+/g, ' '));
 
   // Closing punctuation that may be attached to the last word in the HTML
   // but not included in the user's selected text
