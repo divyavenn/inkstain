@@ -8,7 +8,7 @@ Readers highlight passages and leave likes, dislikes, comments, and suggested ed
 
 Click the button to deploy your own instance. You'll need a [Neon](https://neon.tech) Postgres database (free tier works).
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink&env=BOOK_SLUG,BOOK_TITLE&envDescription=Book%20config&envLink=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink%23environment-variables&project-name=inklink&repository-name=inklink&products=[{%22type%22:%22integration%22,%22integrationSlug%22:%22neon%22,%22productSlug%22:%22neon%22,%22protocol%22:%22storage%22}])
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink&env=TITLE,AUTHOR_DASH_PASSWORD&envDescription=Book%20title%20(required)%20and%20dashboard%20password%20(optional)&envLink=https%3A%2F%2Fgithub.com%2Fdivyavenn%2Finklink%23environment-variables&project-name=inklink&repository-name=inklink&products=[{%22type%22:%22integration%22,%22integrationSlug%22:%22neon%22,%22productSlug%22:%22neon%22,%22protocol%22:%22storage%22}])
 
 The Neon integration will provision a database and set `DATABASE_URL` automatically. The schema bootstraps itself on first deploy.
 
@@ -17,8 +17,7 @@ The Neon integration will provision a database and set `DATABASE_URL` automatica
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | Neon Postgres connection string (set automatically by the integration) |
-| `BOOK_SLUG` | Yes | URL slug for your work (e.g. `my-novel`) |
-| `BOOK_TITLE` | Yes | Display title |
+| `TITLE` | Yes | Your book's title — the URL slug is derived from this automatically |
 | `AUTHOR_DASH_PASSWORD` | No | Password-protect the author dashboard |
 | `NEXT_PUBLIC_BASE_URL` | No | Your deploy URL, used for generating invite links |
 
@@ -52,6 +51,12 @@ Your chapter content here.
 ```
 
 Push to your deploy branch and Inklink ingests the new commit automatically.
+
+## Staying up to date
+
+Your deployed repo includes a GitHub Action that checks for upstream updates every Monday. When new changes are available, it opens a PR in your repo that you can review and merge from GitHub — no git commands needed.
+
+To pull updates manually at any time, go to **Actions > Sync upstream > Run workflow** in your repo.
 
 ## Features
 

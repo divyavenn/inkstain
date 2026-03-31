@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
+import { getWorkSlug } from '@/lib/slug';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
     }
 
-    const works = await sql`SELECT id FROM works WHERE slug = ${workSlug || process.env.BOOK_SLUG || 'default'}`;
+    const works = await sql`SELECT id FROM works WHERE slug = ${workSlug || getWorkSlug()}`;
     if (works.length === 0) return NextResponse.json({ error: 'Work not found' }, { status: 404 });
     const workId = works[0].id as string;
 

@@ -4,6 +4,7 @@ import { loadAllMarkdownChapters } from '../content/load-markdown';
 import { parseChapter } from './parse-chapter';
 import { diffChapterVersions } from './diff-chapter';
 import { htmlToWords, buildWordMap } from '../db/wordPos';
+import { getWorkSlug } from '@/lib/slug';
 import simpleGit from 'simple-git';
 
 export interface IngestResult {
@@ -66,8 +67,8 @@ async function getPreviousCommitSha(currentSha: string): Promise<string | null> 
 }
 
 export async function runIngest(): Promise<IngestResult> {
-  const workSlug = process.env.BOOK_SLUG || 'default';
-  const workTitle = process.env.BOOK_TITLE || 'My Book';
+  const workSlug = getWorkSlug();
+  const workTitle = process.env.TITLE || 'My Book';
 
   // Fast path: check if already ingested BEFORE running schema DDL
   const commitInfo = await getCurrentCommitInfo();
@@ -141,6 +142,33 @@ export async function runIngest(): Promise<IngestResult> {
 
   // Load and parse all chapters
   const markdownChapters = loadAllMarkdownChapters();
+
+  // Compare against latest stored versions — skip if nothing in chapters/ changed
+  const latestVersions = await sql`
+    SELECT cv.raw_markdown, c.file_path
+    FROM chapter_versions cv
+    JOIN chapters c ON c.id = cv.chapter_id
+    JOIN document_versions dv ON dv.id = cv.document_version_id
+    WHERE c.work_id = ${workId}
+      AND dv.id = (SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1)
+  `;
+  const prevByFile = new Map(latestVersions.map(r => [r.file_path as string, r.raw_markdown as string]));
+  const chaptersChanged = markdownChapters.length !== prevByFile.size
+    || markdownChapters.some(ch => prevByFile.get(ch.filePath) !== ch.rawMarkdown);
+
+  if (!chaptersChanged) {
+    console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — chapter content unchanged`);
+    const [latest] = await sql`
+      SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1
+    `;
+    return {
+      workId,
+      documentVersionId: latest?.id as string ?? documentVersionId,
+      chaptersIngested: 0,
+      alreadyExists: true,
+    };
+  }
+
   let chaptersIngested = 0;
 
   // Get previous document version for diffing

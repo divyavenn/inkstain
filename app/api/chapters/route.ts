@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sql from '@/lib/db/client';
+import { getWorkSlug } from '@/lib/slug';
 
 export async function GET(req: NextRequest) {
   try {
-    const workSlug = process.env.BOOK_SLUG || 'default';
+    const workSlug = getWorkSlug();
     const includeFirst = req.nextUrl.searchParams.get('includeFirst') === '1';
 
     const chapters = await sql`

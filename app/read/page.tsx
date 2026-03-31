@@ -18,7 +18,6 @@ function ReadPageInner() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            workSlug: process.env.NEXT_PUBLIC_BOOK_SLUG,
             inviteToken,
             anonymousId,
           }),

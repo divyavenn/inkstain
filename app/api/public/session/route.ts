@@ -3,6 +3,7 @@ import sql from '@/lib/db/client';
 import { resolveInviteToken } from '@/lib/invites/resolve-invite';
 import { nanoid } from 'nanoid';
 import { ensureIngested } from '@/lib/ingest/run-ingest';
+import { getWorkSlug } from '@/lib/slug';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     ensureIngested().catch(err => console.error('[ingest] background ingest failed:', err));
 
-    const works = await sql`SELECT id FROM works WHERE slug = ${workSlug || process.env.BOOK_SLUG || 'default'}`;
+    const works = await sql`SELECT id FROM works WHERE slug = ${workSlug || getWorkSlug()}`;
     if (works.length === 0) return NextResponse.json({ error: 'Work not found' }, { status: 404 });
     const workId = works[0].id as string;
 

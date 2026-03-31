@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
-import Highlighter from '@/components/Highlighter';
+import info from '@/info.json';
+
 
 const stagger = {
   hidden: {},
@@ -16,11 +17,10 @@ const fadeUp = {
 
 const Page = styled.div`
   min-height: 100vh;
-  background-color: #f2ede4;
+  background-color: #f7f5f0;
   background-image: url('/bg-texture.png');
   background-repeat: repeat;
-  background-size: 400px 400px;
-  background-blend-mode: multiply;
+  background-size: 100px 100px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -30,7 +30,7 @@ const Page = styled.div`
 const Layout = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4rem;
+  gap: 3rem;
   align-items: center;
   max-width: 1200px;
 
@@ -42,21 +42,21 @@ const Layout = styled.div`
 
 const Headline = styled.h1`
   font-family: var(--font-playfair), Georgia, serif;
-  font-size: clamp(2.8rem, 5vw, 4.5rem);
+  font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 400;
   line-height: 1.1;
   color: #1a1a18;
   letter-spacing: -0.02em;
+  text-align: center;
 
   em {
     font-style: italic;
-    display: block;
   }
 `;
 
 const Body = styled.p`
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-size: clamp(0.85rem, 1.2vw, 1rem);
   line-height: 1.65;
   color: #3a3a36;
   max-width: 38ch;
@@ -71,11 +71,11 @@ const CTARow = styled.div`
 
 const PrimaryButton = styled(Link)`
   display: inline-block;
-  padding: 0.9rem 2rem;
+  padding: 0.65rem 1.5rem;
   background: #1a1a18;
   color: #f2ede4;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   letter-spacing: 0.01em;
   border-radius: 4px;
   transition-property: background, scale;
@@ -92,11 +92,11 @@ const PrimaryButton = styled(Link)`
 
 const SecondaryButton = styled(Link)`
   display: inline-block;
-  padding: 0.9rem 2rem;
+  padding: 0.65rem 1.5rem;
   background: transparent;
   color: #1a1a18;
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   letter-spacing: 0.01em;
   border: 1.5px solid #1a1a18;
   border-radius: 4px;
@@ -115,8 +115,8 @@ const SecondaryButton = styled(Link)`
 const Specs = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem 3rem;
-  padding-top: 1.5rem;
+  gap: 1rem 2rem;
+  padding-top: 1rem;
   position: relative;
 
   &::before {
@@ -148,7 +148,7 @@ const SpecLabel = styled.span`
 
 const SpecValue = styled.span`
   font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #1a1a18;
 `;
 
@@ -162,60 +162,43 @@ const Right = styled.div`
   }
 `;
 
-const BookPreview = styled.div`
-  background: #1a1a18;
-  border-radius: 6px;
-  padding: 2.5rem;
-  width: 100%;
-  max-width: 420px;
-  aspect-ratio: 3/4;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+const Footer = styled.footer`
+  text-align: center;
+  margin-top: auto;
+  padding-top: 4rem;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.72rem;
+  color: rgba(26, 26, 24, 0.32);
+
+  a {
+    color: rgba(26, 26, 24, 0.45);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    &:hover { color: #1a1a18; }
+  }
+`;
+
+const DemoVideo = styled.video`
+  width: 50vw;
+  border-radius: 8px;
   box-shadow: 0 32px 80px rgba(26, 26, 24, 0.2);
 `;
 
-const BookMeta = styled.div`
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(242, 237, 228, 0.4);
-`;
-
-const BookBody = styled.div`
-  font-family: var(--font-playfair), Georgia, serif;
-  font-size: 0.95rem;
-  line-height: 1.75;
-  color: rgba(242, 237, 228, 0.6);
-`;
-
-
-const BookTitle = styled.div`
-  font-family: var(--font-playfair), Georgia, serif;
-  font-size: 1.5rem;
-  font-style: italic;
-  color: #f2ede4;
-  line-height: 1.3;
-`;
-
 export default function Home() {
+  const { title: bookTitle, blurb } = info;
+
   return (
     <Page>
       <Layout>
-        <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <motion.div variants={stagger} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <motion.div variants={fadeUp}>
             <Headline>
-              Introducing
-              <em>Inklink.</em>
+              Introducing <em>{bookTitle}.</em>
             </Headline>
           </motion.div>
 
           <motion.div variants={fadeUp}>
-            <Body>
-              Inklink makes collecting reader feedback as easy as sharing a link. We track word-level reactions, retention rates, and email addresses from interested readers,
-              and show you exactly where and how your writing hits (and where it doesn't).
-            </Body>
+            <Body>{blurb}</Body>
           </motion.div>
 
           <motion.div variants={fadeUp}>
@@ -244,6 +227,10 @@ export default function Home() {
                 <SpecValue>Distraction-free</SpecValue>
               </Spec>
             </Specs>
+
+                  <Footer>
+        an <a href="https://github.com/divyavenn/inklink" target="_blank" rel="noopener noreferrer">open source tool</a> built by <a href="https://divyavenn.com/" target="_blank" rel="noopener noreferrer">divya venn</a>.
+            </Footer>
           </motion.div>
         </motion.div>
 
@@ -253,20 +240,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <BookPreview>
-              <BookMeta>Chapter 1 — Draft</BookMeta>
-              <BookBody>
-                The morning light came through the curtains in{' '}
-                <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>thin, pale ribbons</Highlighter> — the kind that
-                make dust look deliberate. She sat at the table with her coffee,
-                watching the steam rise and curl and{' '}
-                <Highlighter color="yellow" opacity={0.28} style={{ color: 'rgba(242,237,228,0.9)' }}>disappear into nothing</Highlighter>, which
-                seemed, at the time, like a kind of answer.
-              </BookBody>
-              <BookTitle>
-                Something<br />Worth Saying
-              </BookTitle>
-            </BookPreview>
+            <DemoVideo autoPlay muted loop playsInline>
+              <source src="/inklink_overview.mp4" type="video/mp4" />
+            </DemoVideo>
           </motion.div>
         </Right>
       </Layout>

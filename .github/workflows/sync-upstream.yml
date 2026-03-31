@@ -1,0 +1,60 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # every Monday at 9 AM UTC
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/divyavenn/inklink.git || true
+          git fetch upstream main
+
+      - name: Check for new commits
+        id: check
+        run: |
+          BEHIND=$(git rev-list --count HEAD..upstream/main)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR branch and open PR
+        if: steps.check.outputs.behind != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="sync-upstream/$(date +%Y-%m-%d)"
+          git checkout -b "$BRANCH"
+          git merge upstream/main --no-edit || true
+
+          # If merge conflicts, commit the conflict markers so the PR is visible
+          if [ -n "$(git ls-files -u)" ]; then
+            git add -A
+            git commit -m "sync: merge upstream (has conflicts to resolve manually)"
+          fi
+
+          git push origin "$BRANCH"
+
+          # Only create PR if one doesn't already exist for this branch
+          EXISTING=$(gh pr list --head "$BRANCH" --json number --jq 'length')
+          if [ "$EXISTING" = "0" ]; then
+            gh pr create \
+              --title "Sync with upstream inklink" \
+              --body "$(cat <<'EOF'
+          Automated PR to pull the latest changes from [divyavenn/inklink](https://github.com/divyavenn/inklink).
+
+          **If there are merge conflicts**, resolve them before merging. Your customizations (env vars, chapters, styles) should not conflict in most cases.
+
+          This PR was created by the `sync-upstream` workflow. You can also trigger it manually from the Actions tab.
+          EOF
+          )"
+          fi
