@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import StyledComponentsRegistry from '@/lib/registry';
 import { Playfair_Display, Inter, Caveat } from 'next/font/google';
+import info from '@/info.json';
 import './globals.css';
 
 const playfair = Playfair_Display({
@@ -22,8 +23,8 @@ const caveat = Caveat({
 });
 
 export const metadata: Metadata = {
-  title: 'BookBeta - Writing Feedback Platform',
-  description: 'A minimal interface for collecting feedback on your writing',
+  title: info.title,
+  description: info.blurb,
 };
 
 export default function RootLayout({
