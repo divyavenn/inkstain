@@ -2,7 +2,6 @@ import sql, { rawQuery } from '../db/client';
 import { CREATE_SCHEMA_SQL } from '../db/schema';
 import { loadAllMarkdownChapters } from '../content/load-markdown';
 import { parseChapter } from './parse-chapter';
-import { diffChapterVersions } from './diff-chapter';
 import { htmlToWords, buildWordMap } from '../db/wordPos';
 import { getWorkSlug } from '@/lib/slug';
 import simpleGit from 'simple-git';
@@ -51,21 +50,6 @@ async function getCurrentCommitInfo(): Promise<{
   };
 }
 
-async function getPreviousCommitSha(currentSha: string): Promise<string | null> {
-  const git = simpleGit(process.cwd());
-  try {
-    const log = await git.log({ maxCount: 2 });
-    const commits = log.all;
-    const currentIdx = commits.findIndex(c => c.hash === currentSha);
-    if (currentIdx >= 0 && currentIdx + 1 < commits.length) {
-      return commits[currentIdx + 1].hash;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 export async function runIngest(): Promise<IngestResult> {
   const workSlug = getWorkSlug();
   const workTitle = process.env.TITLE || 'My Book';
@@ -87,27 +71,6 @@ export async function runIngest(): Promise<IngestResult> {
           alreadyExists: true,
         };
       }
-
-      // Check if this commit touches chapters/ — skip if not
-      try {
-        const git = simpleGit(process.cwd());
-        const prevSha = await getPreviousCommitSha(commitInfo.sha);
-        if (prevSha) {
-          const diff = await git.diff(['--name-only', prevSha, commitInfo.sha, '--', 'chapters/']);
-          if (!diff.trim()) {
-            console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — no changes in chapters/`);
-            const [latest] = await sql`
-              SELECT id FROM document_versions WHERE work_id = ${work.id} ORDER BY deployed_at DESC LIMIT 1
-            `;
-            return {
-              workId: work.id as string,
-              documentVersionId: latest?.id as string ?? '',
-              chaptersIngested: 0,
-              alreadyExists: true,
-            };
-          }
-        }
-      } catch { /* git not available, fall through */ }
     }
   } catch {
     // Schema doesn't exist yet — fall through to DDL
@@ -131,19 +94,12 @@ export async function runIngest(): Promise<IngestResult> {
   `;
   const workId = work.id as string;
 
-  // Create document version
-  const [docVersion] = await sql`
-    INSERT INTO document_versions (work_id, commit_sha, commit_message, commit_author, commit_created_at)
-    VALUES (${workId}, ${commitInfo.sha}, ${commitInfo.message}, ${commitInfo.author}, ${commitInfo.createdAt})
-    ON CONFLICT (work_id, commit_sha) DO UPDATE SET deployed_at = now()
-    RETURNING id
-  `;
-  const documentVersionId = docVersion.id as string;
-
   // Load and parse all chapters
   const markdownChapters = loadAllMarkdownChapters();
 
-  // Compare against latest stored versions — skip if nothing in chapters/ changed
+  // Compare against latest stored versions BEFORE creating document_version —
+  // skip entirely if nothing in chapters/ changed (avoids creating DB rows for
+  // commits that don't touch chapter content).
   const latestVersions = await sql`
     SELECT cv.raw_markdown, c.file_path
     FROM chapter_versions cv
@@ -163,16 +119,22 @@ export async function runIngest(): Promise<IngestResult> {
     `;
     return {
       workId,
-      documentVersionId: latest?.id as string ?? documentVersionId,
+      documentVersionId: latest?.id as string ?? '',
       chaptersIngested: 0,
       alreadyExists: true,
     };
   }
 
-  let chaptersIngested = 0;
+  // Create document version (only when chapter content has actually changed)
+  const [docVersion] = await sql`
+    INSERT INTO document_versions (work_id, commit_sha, commit_message, commit_author, commit_created_at)
+    VALUES (${workId}, ${commitInfo.sha}, ${commitInfo.message}, ${commitInfo.author}, ${commitInfo.createdAt})
+    ON CONFLICT (work_id, commit_sha) DO UPDATE SET deployed_at = now()
+    RETURNING id
+  `;
+  const documentVersionId = docVersion.id as string;
 
-  // Get previous document version for diffing
-  const prevSha = await getPreviousCommitSha(commitInfo.sha);
+  let chaptersIngested = 0;
 
   for (const rawChapter of markdownChapters) {
     const parsed = parseChapter(rawChapter);
@@ -236,33 +198,27 @@ export async function runIngest(): Promise<IngestResult> {
       `;
     }
 
-    // Compute and store diff + word map
-    if (prevSha) {
-      const diffResult = await diffChapterVersions(parsed.filePath, prevSha, commitInfo.sha);
+    // Compute word map from DB (no git needed) for cross-version feedback tracking
+    const prevChapterVersions = await sql`
+      SELECT cv.id, cv.rendered_html FROM chapter_versions cv
+      WHERE cv.chapter_id = ${chapterId} AND cv.id != ${chapterVersionId}
+      ORDER BY cv.version_number DESC LIMIT 1
+    `;
+    const prevChapterVersion = prevChapterVersions[0] ?? null;
 
-      // Find previous chapter version
-      const prevChapterVersions = await sql`
-        SELECT cv.id, cv.rendered_html FROM chapter_versions cv
-        JOIN document_versions dv ON dv.id = cv.document_version_id
-        WHERE cv.chapter_id = ${chapterId} AND dv.commit_sha = ${prevSha}
-      `;
-      const prevChapterVersion = prevChapterVersions[0] ?? null;
-      const prevChapterVersionId = prevChapterVersion?.id as string | null;
-
-      // Word-level alignment map (new index → old index, -1 if new)
+    if (prevChapterVersion) {
+      const prevChapterVersionId = prevChapterVersion.id as string;
       const newWords = htmlToWords(parsed.renderedHtml);
-      const wordMap = prevChapterVersion
-        ? buildWordMap(htmlToWords(prevChapterVersion.rendered_html as string), newWords)
-        : null;
+      const wordMap = buildWordMap(
+        htmlToWords(prevChapterVersion.rendered_html as string),
+        newWords,
+      );
 
       await sql`
         INSERT INTO chapter_diffs (
-          chapter_version_id, previous_chapter_version_id,
-          added_lines, removed_lines, changed_lines, diff_json, word_map
+          chapter_version_id, previous_chapter_version_id, word_map
         ) VALUES (
-          ${chapterVersionId}, ${prevChapterVersionId ?? null},
-          ${diffResult.addedLines}, ${diffResult.removedLines}, ${diffResult.changedLines},
-          ${JSON.stringify(diffResult.diffJson)}, ${wordMap}
+          ${chapterVersionId}, ${prevChapterVersionId}, ${wordMap}
         )
         ON CONFLICT DO NOTHING
       `;

@@ -68,12 +68,13 @@ CREATE TABLE IF NOT EXISTS chapter_diffs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   chapter_version_id uuid NOT NULL REFERENCES chapter_versions(id),
   previous_chapter_version_id uuid REFERENCES chapter_versions(id),
-  added_lines int NOT NULL DEFAULT 0,
-  removed_lines int NOT NULL DEFAULT 0,
-  changed_lines int NOT NULL DEFAULT 0,
-  diff_json jsonb,
   word_map int[]
 );
+
+ALTER TABLE chapter_diffs DROP COLUMN IF EXISTS added_lines;
+ALTER TABLE chapter_diffs DROP COLUMN IF EXISTS removed_lines;
+ALTER TABLE chapter_diffs DROP COLUMN IF EXISTS changed_lines;
+ALTER TABLE chapter_diffs DROP COLUMN IF EXISTS diff_json;
 
 CREATE TABLE IF NOT EXISTS reader_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
