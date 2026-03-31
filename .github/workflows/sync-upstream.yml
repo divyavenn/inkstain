@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,34 +26,27 @@ jobs:
           BEHIND=$(git rev-list --count HEAD..upstream/main)
           echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
 
-      - name: Create PR branch and open PR
+      - name: Sync from upstream
         if: steps.check.outputs.behind != '0'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="sync-upstream/$(date +%Y-%m-%d)"
-          git checkout -b "$BRANCH"
-          git merge upstream/main --no-edit --allow-unrelated-histories || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # If merge conflicts, commit the conflict markers so the PR is visible
-          if [ -n "$(git ls-files -u)" ]; then
-            git add -A
-            git commit -m "sync: merge upstream (has conflicts to resolve manually)"
+          OUR_COMMIT=$(git rev-parse HEAD)
+
+          # Overwrite everything from upstream (no merge, no conflicts)
+          git checkout upstream/main -- .
+
+          # Restore our chapters, workflows, and info.json (the only things we keep)
+          git checkout $OUR_COMMIT -- chapters/ .github/workflows/ info.json
+
+          git add -A
+
+          # Only proceed if there are actual changes
+          if git diff --cached --quiet; then
+            echo "Already up to date."
+            exit 0
           fi
 
-          git push origin "$BRANCH"
-
-          # Only create PR if one doesn't already exist for this branch
-          EXISTING=$(gh pr list --head "$BRANCH" --json number --jq 'length')
-          if [ "$EXISTING" = "0" ]; then
-            gh pr create \
-              --title "Sync with upstream inklink" \
-              --body "$(cat <<'EOF'
-          Automated PR to pull the latest changes from [divyavenn/inklink](https://github.com/divyavenn/inklink).
-
-          **If there are merge conflicts**, resolve them before merging. Your customizations (env vars, chapters, styles) should not conflict in most cases.
-
-          This PR was created by the `sync-upstream` workflow. You can also trigger it manually from the Actions tab.
-          EOF
-          )"
-          fi
+          git commit -m "sync: update from upstream inklink"
+          git push origin main
