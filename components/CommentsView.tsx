@@ -81,6 +81,7 @@ const CommentsList = styled.div`
 `;
 
 const CommentCard = styled(motion.div)<{ $isHovered: boolean; $isEdit?: boolean }>`
+  position: relative;
   padding: 1.1rem 1.25rem;
   border-bottom: 1px solid rgba(26,26,24,0.055);
   cursor: pointer;
@@ -90,6 +91,32 @@ const CommentCard = styled(motion.div)<{ $isHovered: boolean; $isEdit?: boolean 
     ? (p.$isEdit ? 'rgba(185,120,40,0.6)' : 'rgba(80,100,200,0.45)')
     : 'transparent'};
   &:hover { background: rgba(26,26,24,0.025); }
+`;
+
+const DeleteBtn = styled.button`
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(26,26,24,0.25);
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  ${CommentCard}:hover & { opacity: 1; }
+  &:hover {
+    color: rgba(185,40,40,0.7);
+    background: rgba(185,40,40,0.08);
+  }
 `;
 
 const SnippetText = styled.div`
@@ -204,6 +231,7 @@ interface CommentsViewProps {
   suggestions: DashSuggestion[];
   chapterId: string;
   chapterVersionId: string;
+  onDelete?: (id: string, type: 'comment' | 'suggestion') => void;
 }
 
 interface CrossVersionEntry {
@@ -401,7 +429,7 @@ function charOverlaps(itemStart: number | null, itemLen: number | null, selStart
   return itemStart < selEnd && (itemStart + itemLen) > selStart;
 }
 
-export default function CommentsView({ chapterHtml, comments, suggestions, chapterId, chapterVersionId }: CommentsViewProps) {
+export default function CommentsView({ chapterHtml, comments, suggestions, chapterId, chapterVersionId, onDelete }: CommentsViewProps) {
   const [hoveredPanelId, setHoveredPanelId] = useState<string | null>(null);
   const textPanelRef = useRef<HTMLDivElement>(null);
   const [hoveredMarkIds, setHoveredMarkIds] = useState<string[]>([]);
@@ -553,6 +581,14 @@ export default function CommentsView({ chapterHtml, comments, suggestions, chapt
           <ReaderBadge>{readerName || 'Anonymous'}</ReaderBadge>
           <span>{new Date(item.data.created_at).toLocaleDateString()}</span>
         </CommentMeta>
+        {onDelete && (
+          <DeleteBtn
+            onClick={e => { e.stopPropagation(); onDelete(id, isEdit ? 'suggestion' : 'comment'); }}
+            title="Delete"
+          >
+            ✕
+          </DeleteBtn>
+        )}
       </CommentCard>
     );
   };

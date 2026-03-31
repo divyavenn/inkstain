@@ -156,14 +156,21 @@ const GROUPS = [
   { name: 'Critique Partners', slug: 'critique-partners',  description: 'Deep editing focus' },
 ];
 
-// versionIdx: index into allDocVersions (4 = Mar 16 "migrate 2 neon",
-//                                         5 = Mar 17 first "folder tabs look good now",
-//                                         6 = Mar 17 second "updates")
-// readerIdx:  index into READERS / readerIds / sessionIds
+// versionIdx: index into allDocVersions
+//   4 = "migrate 2 neon" (640159f9) — text uses "who" (old spelling)
+//   5 = "folder tabs look good now" (4e81fb96)
+//   6 = "updates" (9667513a)
+//  15 = 3287d1c0 — text uses "who", skioula present
+//  16 = 114104d5 — text uses "whom", skioula present
+//  17 = "formatting" (74c1ddfd) — latest
+// readerIdx: index into READERS / sessionIds (-1 = anonymous session, seeded separately)
 // selectedText must match the rendered text content verbatim (markdown syntax stripped).
+const LATEST = 17;
+
+// ─── Chapter 1 comments ─────────────────────────────────────────────────────
 
 const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number; versionIdx: number }> = [
-  // ── Mar 16 (index 4): Diana and Marcus read together ──────────────────────
+  // ── v4 (640159f9): Diana and Marcus ───────────────────────────────────────
   {
     selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
     body: 'That first line lands so hard. "A shadow should love who its owner loves" is a beautiful, strange rule. Sets up the whole tragedy in one breath.',
@@ -180,11 +187,6 @@ const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number
     readerIdx: 0, versionIdx: 4,
   },
   {
-    selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.',
-    body: 'The kithara detail is perfect. Shows rather than tells his artistry. I kept hearing the music as I read.',
-    readerIdx: 1, versionIdx: 4,
-  },
-  {
     selectedText: 'Did you eat a bees\' nest? Is this belly filled with cleverness and honey?',
     body: 'The father\'s speech is delightful — "Did you eat a bees\' nest?" is a keeper. His joy vs the king\'s coldness works as early foreshadowing.',
     readerIdx: 0, versionIdx: 4,
@@ -195,7 +197,7 @@ const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number
     readerIdx: 1, versionIdx: 4,
   },
 
-  // ── Mar 17 first (index 5): Sofia reads the same chapter ──────────────────
+  // ── v5 (4e81fb96): Sofia ──────────────────────────────────────────────────
   {
     selectedText: 'there lived a shadow. A shadow should love who its owner loves and hate those who treat him badly.',
     body: 'Coming back to this on the revision — I\'d wondered if the second sentence was redundant, but it isn\'t. It does the work of establishing the stakes quietly. Keep it.',
@@ -212,7 +214,7 @@ const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number
     readerIdx: 2, versionIdx: 5,
   },
 
-  // ── Mar 17 second (index 6): James's read ─────────────────────────────────
+  // ── v6 (9667513a): James ──────────────────────────────────────────────────
   {
     selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.',
     body: 'Thunder-browed is vivid but I\'m not sure it fits the register of the rest of the prose. Feels slightly archaic compared to the nimbler sentences around it.',
@@ -228,10 +230,80 @@ const COMMENTS_C1: Array<{ selectedText: string; body: string; readerIdx: number
     body: 'The accumulation of "that she… that she… that she" works rhythmically but the passage lingers just a beat too long for me. Cutting the last clause might sharpen it.',
     readerIdx: 3, versionIdx: 6,
   },
+
+  // ── v15 (3287d1c0): Diana and Marcus re-read ─────────────────────────────
+  {
+    selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.',
+    body: 'I\'ve come around on thunder-browed. It works because it echoes the mythological register without overplaying it.',
+    readerIdx: 0, versionIdx: 15,
+  },
+  {
+    selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.',
+    body: 'This is the emotional crux of the chapter. The sentence rhythm — short, then long — is exactly right.',
+    readerIdx: 1, versionIdx: 15,
+  },
+  {
+    selectedText: 'One bare foot beat time against the wall as he sang.',
+    body: 'The "beat time" revision is better than the old "beat out a rhythm." More musical, less wordy.',
+    readerIdx: 1, versionIdx: 15,
+  },
+
+  // ── v16 (114104d5): Sofia and James re-read ──────────────────────────────
+  {
+    selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.',
+    body: 'The "whom" correction is subtle but it lifts the register. Feels more like a fable now.',
+    readerIdx: 2, versionIdx: 16,
+  },
+  {
+    selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went',
+    body: 'I was wrong before — the rhythm here needs every clause. Don\'t cut anything.',
+    readerIdx: 3, versionIdx: 16,
+  },
+  {
+    selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.',
+    body: 'Still not sold on thunder-browed. Every other descriptor in this chapter is nimbler.',
+    readerIdx: 3, versionIdx: 16,
+  },
+
+  // ── v17 / LATEST (74c1ddfd): all readers + anonymous ─────────────────────
+  {
+    selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.',
+    body: 'Re-reading after all the edits — "whom" is better than the old "who". The opening still lands perfectly.',
+    readerIdx: 0, versionIdx: LATEST,
+  },
+  {
+    selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.',
+    body: 'This still might be my favorite line in the whole chapter. The tenderness of the nickname does so much.',
+    readerIdx: 0, versionIdx: LATEST,
+  },
+  {
+    selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.',
+    body: 'On a second pass, I think thunder-browed is perfect actually. It sets Oeagrus apart from Orpheus in a single stroke.',
+    readerIdx: 1, versionIdx: LATEST,
+  },
+  {
+    selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.',
+    body: 'Still the strongest paragraph in the chapter. The shift from warmth to foreboding is seamless.',
+    readerIdx: 2, versionIdx: LATEST,
+  },
+  {
+    selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went',
+    body: 'OK I take back what I said in the last round — the rhythm here is deliberate and earned. The repetition mirrors her devotion.',
+    readerIdx: 3, versionIdx: LATEST,
+  },
 ];
 
+// Anonymous comments for latest version (readerIdx -1, seeded separately in main)
+const ANON_COMMENTS_C1: Array<{ selectedText: string; body: string; versionIdx: number }> = [
+  { selectedText: 'She hadn\'t meant to stare, or more precisely to be caught staring', body: 'i don\'t think you need this sentence', versionIdx: LATEST },
+  { selectedText: 'One bare foot beat time against the wall as he sang.', body: 'have a hard time picturing this', versionIdx: LATEST },
+  { selectedText: 'Brygias Archon?"', body: 'is this a title?', versionIdx: LATEST },
+];
+
+// ─── Chapter 2 comments ─────────────────────────────────────────────────────
+
 const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number; versionIdx: number }> = [
-  // ── Mar 16 (index 4) ──────────────────────────────────────────────────────
+  // ── v4 ────────────────────────────────────────────────────────────────────
   {
     selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.',
     body: 'Olyxena\'s introduction is immediately warm and specific. The contrast with Eurydice set up on the next page is effective.',
@@ -242,7 +314,7 @@ const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number
     body: 'The "wood-god father" rumor is tantalizing. I want just slightly more — a detail that makes us believe it before we dismiss it.',
     readerIdx: 1, versionIdx: 4,
   },
-  // ── Mar 17 first (index 5) ────────────────────────────────────────────────
+  // ── v5 ────────────────────────────────────────────────────────────────────
   {
     selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools',
     body: 'The smell description (crushed stems, darkened pools) is excellent. Very sensory. Sets Eurydice apart without othering her clumsily.',
@@ -253,29 +325,71 @@ const COMMENTS_C2: Array<{ selectedText: string; body: string; readerIdx: number
     body: 'This is a neat summary line but it tells rather than shows. Could this be dramatised in a small scene instead?',
     readerIdx: 2, versionIdx: 5,
   },
+  // ── v15 ───────────────────────────────────────────────────────────────────
+  {
+    selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.',
+    body: 'Olyxena still feels fully alive every time I re-read this. The contrast with Eurydice is sharper now.',
+    readerIdx: 0, versionIdx: 15,
+  },
+  {
+    selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools',
+    body: 'The scent imagery has grown on me. It does the work of setting Eurydice apart without a single line of exposition.',
+    readerIdx: 1, versionIdx: 15,
+  },
+  // ── v16 ───────────────────────────────────────────────────────────────────
+  {
+    selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.',
+    body: 'I still think this tells more than it shows. But it\'s a minor quibble now — the chapter earns it.',
+    readerIdx: 2, versionIdx: 16,
+  },
+  {
+    selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.',
+    body: 'This rumor is doing double duty now — foreshadowing and world-building. Stronger than I first thought.',
+    readerIdx: 3, versionIdx: 16,
+  },
+  // ── v17 / LATEST ──────────────────────────────────────────────────────────
+  {
+    selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.',
+    body: 'Olyxena still pops off the page. The trio of adjectives — loud, undignified, careless — is just right.',
+    readerIdx: 0, versionIdx: LATEST,
+  },
+  {
+    selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.',
+    body: 'The wood-god detail works even better now. It seeds doubt without making Eurydice a villain.',
+    readerIdx: 1, versionIdx: LATEST,
+  },
 ];
 
-const EDITS_C1: Array<{ original: string; suggested: string; rationale: string; readerIdx: number; versionIdx: number }> = [
-  // ── Mar 16 (index 4): Marcus's line edits ────────────────────────────────
-  {
-    original: 'But loyalty is rarely that easy.',
-    suggested: 'But a shadow\'s loyalty is rarely that simple.',
-    rationale: 'Tying "loyalty" back to "shadow" tightens the antecedent; "simple" echoes the word changed in a recent commit and feels less clichéd than "easy".',
-    readerIdx: 1, versionIdx: 4,
-  },
-  {
-    original: 'One bare foot beat out a rhythm against the wall',
-    suggested: 'One bare foot beat time against the stone wall',
-    rationale: '"beat time" sounds more musical; "stone wall" gives a texture that matches the palace setting.',
-    readerIdx: 1, versionIdx: 4,
-  },
-  // ── Mar 17 first (index 5): Sofia's edit ─────────────────────────────────
+// ─── Chapter 1 suggested edits ──────────────────────────────────────────────
+
+const EDITS_C1: Array<{ original: string; suggested: string; rationale: string | null; readerIdx: number; versionIdx: number }> = [
+  // ── v5: Sofia ─────────────────────────────────────────────────────────────
   {
     original: 'Good times pass in a blur; only in hindsight do you recognize them as happiness.',
     suggested: 'Good times pass in a blur; only in grief do you recognise them as happiness.',
     rationale: '"In grief" is more specific and emotionally charged than "in hindsight" — it anticipates Eurydice\'s death without spelling it out.',
     readerIdx: 2, versionIdx: 5,
   },
+  // ── v16: Marcus ───────────────────────────────────────────────────────────
+  {
+    original: 'One bare foot beat time against the wall as he sang.',
+    suggested: 'One bare foot beat time against the stone wall as he sang.',
+    rationale: '"Stone" gives the palace a tactile quality — you can feel the cold against his foot.',
+    readerIdx: 1, versionIdx: 16,
+  },
+  // ── v17 / LATEST: Marcus + anonymous ──────────────────────────────────────
+  {
+    original: 'One bare foot beat time against the wall as he sang.',
+    suggested: 'One bare foot beat time against the stone wall as he sang.',
+    rationale: '"Stone" gives the palace a tactile quality — you can feel the cold against his foot.',
+    readerIdx: 1, versionIdx: LATEST,
+  },
+];
+
+// Anonymous edits for latest version
+const ANON_EDITS_C1: Array<{ original: string; suggested: string; rationale: string | null; versionIdx: number }> = [
+  { original: 'She\'d heard the music', suggested: 'She\'d simply heard the music ', rationale: null, versionIdx: LATEST },
+  { original: 'hair bleached silver by', suggested: 'hair bleached by', rationale: null, versionIdx: LATEST },
 ];
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -432,6 +546,27 @@ async function main() {
   }
   console.log(`  ✓ ${sessionIds.length} sessions created`);
 
+  // ── Anonymous sessions (extra readers for retention curve variety) ───────────
+  console.log('\n👻 Creating anonymous sessions for retention data…');
+  const anonSessionIds: string[] = [];
+  const ANON_COUNT = 8;
+  for (let i = 0; i < ANON_COUNT; i++) {
+    const anonId = `anon-seed-extra-${i}`;
+    const [sess] = await sql`
+      INSERT INTO reader_sessions (work_id, anonymous_id)
+      VALUES (${workId}, ${anonId})
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `;
+    if (!sess) {
+      const [existing] = await sql`SELECT id FROM reader_sessions WHERE work_id = ${workId} AND anonymous_id = ${anonId}`;
+      anonSessionIds.push(existing.id as string);
+    } else {
+      anonSessionIds.push(sess.id as string);
+    }
+  }
+  console.log(`  ✓ ${anonSessionIds.length} anonymous sessions created`);
+
   // ── Get ALL chapter versions across every ingested commit ────────────────────
   console.log('\n📚 Getting all chapter versions…');
 
@@ -446,85 +581,119 @@ async function main() {
     process.exit(1);
   }
 
-  // Readers 0-2 (Diana, Marcus, Sofia) land on the Mar 16 commit (index 4).
-  // Reader 3 (James) lands on the first Mar 17 commit (index 5).
-  // This concentrates most feedback on the same version for a dense heatmap,
-  // while keeping one reader on a separate nearby version.
-  const readerVersionIndex: Record<number, number> = {
-    0: 4,  // Diana: Mar 16 commit (640159f9)
-    1: 4,  // Marcus: Mar 16 commit (same version, overlapping reactions)
-    2: 4,  // Sofia: Mar 16 commit (same version, overlapping reactions)
-    3: 5,  // James: Mar 17 first commit (4e81fb96)
-  };
+  // ── All reactions now use versionIdx (like comments/edits) ──────────────────
 
-  // Chapter 1 reactions — dense overlapping data so the heatmap is clearly visible
-  const c1Reactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number }> = [
-    // Opening rule — all 4 readers react, 3 like / 1 dislike
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 0 },
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 1 },
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 2 },
-    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'dislike', readerIdx: 3 },
+  type Reaction = { selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number; versionIdx: number };
 
-    // Kithara imagery — all 4 like
-    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 0 },
-    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 1 },
-    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 2 },
-    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 3 },
+  const c1Reactions: Reaction[] = [
+    // ── v4 (640159f9): readers 0-2 ──────────────────────────────────────────
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'like',    readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like', readerIdx: 1, versionIdx: 4 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'dislike', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 2, versionIdx: 4 },
 
-    // Father's speech — 3 like, 1 dislike
-    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 0 },
-    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 1 },
-    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'like',    readerIdx: 2 },
-    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'dislike', readerIdx: 3 },
+    // ── v5 (4e81fb96): reader 3 (James) ─────────────────────────────────────
+    { selectedText: 'A shadow should love who its owner loves and hate those who treat him badly.', reaction: 'dislike', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'his fingers danced lazily but expertly over the strings of his kithara as he sang.', reaction: 'like', readerIdx: 3, versionIdx: 5 },
+    { selectedText: "Did you eat a bees' nest? Is this belly filled with cleverness and honey?", reaction: 'dislike', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 3, versionIdx: 5 },
 
-    // King watching Orpheus — 2 like, 2 dislike (split opinion)
-    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 0 },
-    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like',    readerIdx: 1 },
-    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 2 },
-    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 3 },
+    // ── v15 (3287d1c0): Diana and Marcus ─────────────────────────────────────
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like', readerIdx: 0, versionIdx: 15 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like', readerIdx: 1, versionIdx: 15 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 0, versionIdx: 15 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 1, versionIdx: 15 },
+    { selectedText: 'One bare foot beat time against the wall as he sang.', reaction: 'like', readerIdx: 1, versionIdx: 15 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went', reaction: 'like', readerIdx: 0, versionIdx: 15 },
 
-    // Reflective line — all 4 like
-    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 0 },
-    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 1 },
-    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2 },
-    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 3 },
+    // ── v16 (114104d5): Sofia and James ──────────────────────────────────────
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', readerIdx: 2, versionIdx: 16 },
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', readerIdx: 3, versionIdx: 16 },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 3, versionIdx: 16 },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2, versionIdx: 16 },
+    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went', reaction: 'like', readerIdx: 3, versionIdx: 16 },
 
-    // Quicksilver metaphor — 2 like, 2 dislike
-    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 0 },
-    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'like',    readerIdx: 2 },
-    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 1 },
-    { selectedText: 'He was quicksilver where the king was iron, with wrists like a lark\'s whistle and a body corded with lean muscle.', reaction: 'dislike', readerIdx: 3 },
-
-    // Hesypera trailing Orpheus — 3 like, 1 dislike
-    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 0 },
-    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 2 },
-    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'like',    readerIdx: 3 },
-    { selectedText: 'simply happy he existed, that she breathed the same air as him, that she alone was welcome to go wherever he went, that she would spend the rest of her life listening to his voice echo in the river.', reaction: 'dislike', readerIdx: 1 },
-
-    // The great joy line — all 4 like
-    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 0 },
-    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 1 },
-    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 2 },
-    { selectedText: 'The great joy the king would have surely taken in fatherhood was tainted before the prince was one day old.', reaction: 'like', readerIdx: 3 },
+    // ── v17 / LATEST (74c1ddfd): all readers + anonymous ─────────────────────
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', readerIdx: 0, versionIdx: LATEST },
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', readerIdx: 1, versionIdx: LATEST },
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', readerIdx: 2, versionIdx: LATEST },
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'dislike', readerIdx: 3, versionIdx: LATEST },
+    { selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.', reaction: 'like', readerIdx: 0, versionIdx: LATEST },
+    { selectedText: 'He called her skioula, little shade, because he caught her peeping at him from behind a curtain.', reaction: 'like', readerIdx: 2, versionIdx: LATEST },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'like', readerIdx: 1, versionIdx: LATEST },
+    { selectedText: 'Night after night King Oeagrus, thunder-browed, watched the slender figure of his heir roam the banks of the Hebrus and sing.', reaction: 'dislike', readerIdx: 3, versionIdx: LATEST },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 0, versionIdx: LATEST },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 1, versionIdx: LATEST },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 2, versionIdx: LATEST },
+    { selectedText: 'Good times pass in a blur; only in hindsight do you recognize them as happiness. It takes shock and misery and fear to pull life into sharp focus.', reaction: 'like', readerIdx: 3, versionIdx: LATEST },
   ];
 
-  // Chapter 2 reactions — text-based
-  const c2Reactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; readerIdx: number }> = [
-    // Olyxena intro
-    { selectedText: 'Everything about her was loud and undignified and careless. But she was easy to love', reaction: 'like', readerIdx: 0 },
-    // Eurydice's moods
-    { selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.', reaction: 'like', readerIdx: 1 },
-    // The scent description
-    { selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools', reaction: 'like', readerIdx: 2 },
-    // Shadow line in Orpheus's dialogue — great callback
-    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 0 },
-    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 2 },
-    // Night on the river
-    { selectedText: 'The moon hung heavy in the sky and the homelike Hebrus became a different river entirely, dark and seemingly endless.', reaction: 'like', readerIdx: 2 },
-    // Eurydice burning against darkness
-    { selectedText: 'She burned against the darkness, her face tipped back to drink up the moon.', reaction: 'like', readerIdx: 3 },
-    // James dislikes something
-    { selectedText: 'She laid down her needlework and, almost without knowing what she was doing, walked over to join Eurydice.', reaction: 'dislike', readerIdx: 3 },
+  // Anonymous reactions for latest version
+  const c1AnonReactions: Array<{ selectedText: string; reaction: 'like' | 'dislike'; versionIdx: number }> = [
+    { selectedText: 'Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow. A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'Once upon a time,', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'Once upon a time, on the banks of the river Hebrus, in a land that would one day be known as Thrace, there lived a shadow.', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'A shadow should love whom its owner loves and hate those who treat him badly, but loyalty is rarely that easy.', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'It had been a warm, windy night when the prince first turned to her with a smile and named her. He called her skioula, little shade, because he caught her peeping at him from behind a curtain.', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'carelessly', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'carelessly', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'carelessly', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'carelessly', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'The sun died early\n\nThe moon cared little\n\nHe sang secrets to the sparrows\n\nShe overheard and stole them', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'The sun died early\n\nThe moon cared little\n\nHe sang secrets to the sparrows\n\nShe overheard and stole them', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'The sun died early\n\nThe moon cared little\n\nHe sang secrets to the sparrows\n\nShe overheard and stole them', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'The sun died early\n\nThe moon cared little\n\nHe sang secrets to the sparrows\n\nShe overheard and stole them', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'The moon cared little\n\nHe sang secrets to the sparrows\n\nShe overheard and stole them', reaction: 'like', versionIdx: LATEST },
+    { selectedText: 'She overheard and stole them', reaction: 'dislike', versionIdx: LATEST },
+    { selectedText: 'She\'d simply heard the music faintly from some distant hall and walked towards it in a trance.', reaction: 'like', versionIdx: LATEST },
+  ];
+
+  const c2Reactions: Reaction[] = [
+    // ── v4 ──────────────────────────────────────────────────────────────────
+    { selectedText: 'Everything about her was loud and undignified and careless. But she was easy to love', reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.', reaction: 'like', readerIdx: 1, versionIdx: 4 },
+    { selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools', reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 0, versionIdx: 4 },
+    { selectedText: "A man couldn't get away from his shadow, could he, even if he wanted to? And I'd never want to.", reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    { selectedText: 'The moon hung heavy in the sky and the homelike Hebrus became a different river entirely, dark and seemingly endless.', reaction: 'like', readerIdx: 2, versionIdx: 4 },
+    // ── v5 ──────────────────────────────────────────────────────────────────
+    { selectedText: 'She burned against the darkness, her face tipped back to drink up the moon.', reaction: 'like', readerIdx: 3, versionIdx: 5 },
+    { selectedText: 'She laid down her needlework and, almost without knowing what she was doing, walked over to join Eurydice.', reaction: 'dislike', readerIdx: 3, versionIdx: 5 },
+    // ── v15 ─────────────────────────────────────────────────────────────────
+    { selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.', reaction: 'like', readerIdx: 0, versionIdx: 15 },
+    { selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools', reaction: 'like', readerIdx: 1, versionIdx: 15 },
+    // ── v16 ─────────────────────────────────────────────────────────────────
+    { selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.', reaction: 'dislike', readerIdx: 3, versionIdx: 16 },
+    { selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.', reaction: 'like', readerIdx: 2, versionIdx: 16 },
+    // ── v17 / LATEST ────────────────────────────────────────────────────────
+    { selectedText: 'The Lady Olyxena was like no noblewoman Hesypera had ever met. Everything about her was loud and undignified and careless.', reaction: 'like', readerIdx: 0, versionIdx: LATEST },
+    { selectedText: 'They whispered that her father was a wood-god, a servant of Pan, that there was bewitchment in her.', reaction: 'like', readerIdx: 1, versionIdx: LATEST },
+    { selectedText: 'An odd scent hung about Eurydice wherever she went, a smell like crushed stems and darkened pools', reaction: 'like', readerIdx: 2, versionIdx: LATEST },
+    { selectedText: 'Her moods were as unpredictable as storms in the spring: sudden sunshine and frightening temper.', reaction: 'dislike', readerIdx: 3, versionIdx: LATEST },
   ];
 
   let totalReactions = 0, totalComments = 0, totalEdits = 0, totalReads = 0;
@@ -542,13 +711,16 @@ async function main() {
 
     const c1Id = cvRows.find(v => v.file_path === 'chapter-01.md')?.id as string | undefined;
     const c2Id = cvRows.find(v => v.file_path === 'chapter-02.md')?.id as string | undefined;
+    const c3Id = cvRows.find(v => v.file_path === 'chapter-03.md')?.id as string | undefined;
+    const cXId = cvRows.find(v => v.file_path === 'chapter-X.md')?.id as string | undefined;
 
-    console.log(`  commit ${(dv.commit_sha as string).slice(0, 8)}: c1=${c1Id?.slice(0,8) ?? 'missing'} c2=${c2Id?.slice(0,8) ?? 'missing'}`);
+    console.log(`  commit ${(dv.commit_sha as string).slice(0, 8)}: c1=${c1Id?.slice(0,8) ?? 'missing'} c2=${c2Id?.slice(0,8) ?? 'missing'} c3=${c3Id?.slice(0,8) ?? 'missing'} cX=${cXId?.slice(0,8) ?? 'missing'}`);
 
     if (c1Id) {
       const [c1Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c1Id}`;
 
-      const c1ReactionsToSeed = c1Reactions.filter(r => readerVersionIndex[r.readerIdx] === dvIndex);
+      // Known-reader reactions
+      const c1ReactionsToSeed = c1Reactions.filter(r => r.versionIdx === dvIndex);
       for (const r of c1ReactionsToSeed) {
         const ri = r.readerIdx;
         const wp = feedbackWordPos(c1Ver.rendered_html, r.selectedText);
@@ -559,6 +731,18 @@ async function main() {
         `;
       }
       totalReactions += c1ReactionsToSeed.length;
+
+      // Anonymous reactions
+      const c1AnonReactionsToSeed = c1AnonReactions.filter(r => r.versionIdx === dvIndex);
+      for (const r of c1AnonReactionsToSeed) {
+        const wp = feedbackWordPos(c1Ver.rendered_html, r.selectedText);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
+        await sql`
+          INSERT INTO feedback_reactions (reader_session_id, chapter_version_id, selected_text, word_start, word_end, char_start, char_length, reaction)
+          VALUES (${anonSessionIds[0]}, ${c1Id}, ${r.selectedText}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${r.reaction})
+        `;
+      }
+      totalReactions += c1AnonReactionsToSeed.length;
 
       const c1CommentsToSeed = COMMENTS_C1.filter(c => c.versionIdx === dvIndex);
       for (const c of c1CommentsToSeed) {
@@ -584,14 +768,40 @@ async function main() {
       }
       totalEdits += c1EditsToSeed.length;
 
-      // Reads for c1
-      const c1Reads = [
+      // Anonymous comments for c1
+      const c1AnonCommentsToSeed = ANON_COMMENTS_C1.filter(c => c.versionIdx === dvIndex);
+      for (const c of c1AnonCommentsToSeed) {
+        const wp = feedbackWordPos(c1Ver.rendered_html, c.selectedText);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
+        await sql`
+          INSERT INTO feedback_comments (reader_session_id, chapter_version_id, selected_text, body, char_start, char_length, word_start, word_end)
+          VALUES (${anonSessionIds[0]}, ${c1Id}, ${c.selectedText}, ${c.body}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
+        `;
+      }
+      totalComments += c1AnonCommentsToSeed.length;
+
+      // Anonymous edits for c1
+      const c1AnonEditsToSeed = ANON_EDITS_C1.filter(e => e.versionIdx === dvIndex);
+      for (const e of c1AnonEditsToSeed) {
+        const wp = feedbackWordPos(c1Ver.rendered_html, e.original);
+        const cp = wp ? wordRangeToCharPos(c1Ver.rendered_html, wp.wordStart, wp.wordEnd) : null;
+        await sql`
+          INSERT INTO suggested_edits (reader_session_id, chapter_version_id, original_text, suggested_text, rationale, char_start, char_length, word_start, word_end)
+          VALUES (${anonSessionIds[0]}, ${c1Id}, ${e.original}, ${e.suggested}, ${e.rationale}, ${cp?.charStart ?? null}, ${cp?.charLength ?? null}, ${wp?.wordStart ?? null}, ${wp?.wordEnd ?? null})
+        `;
+      }
+      totalEdits += c1AnonEditsToSeed.length;
+
+      // Reads for c1 — known readers (only on their assigned version)
+      const c1KnownReads: Array<{ sessionIdx: number; maxLine: number; maxScroll: number; activeSeconds: number; completionPct: number; completed: boolean }> = [
         { sessionIdx: 0, maxLine: 145, maxScroll: 98, activeSeconds: 1240, completionPct: 98, completed: true  },
         { sessionIdx: 1, maxLine: 148, maxScroll: 99, activeSeconds: 1560, completionPct: 99, completed: true  },
         { sessionIdx: 2, maxLine: 150, maxScroll: 99, activeSeconds: 1100, completionPct: 99, completed: true  },
         { sessionIdx: 3, maxLine: 72,  maxScroll: 47, activeSeconds: 620,  completionPct: 47, completed: false },
       ];
-      for (const r of c1Reads) {
+      const c1ReadVersions: Record<number, number> = { 0: 4, 1: 4, 2: 4, 3: 5 };
+      const c1ReadsToSeed = c1KnownReads.filter(r => c1ReadVersions[r.sessionIdx] === dvIndex);
+      for (const r of c1ReadsToSeed) {
         const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 7).toISOString() : null;
         await sql`
           INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
@@ -602,13 +812,39 @@ async function main() {
             completed_at = EXCLUDED.completed_at
         `;
       }
-      totalReads += c1Reads.length;
+      totalReads += c1ReadsToSeed.length;
+
+      // Anonymous reads for c1 — only on latest version (last dvIndex) for a rich drop-off curve
+      if (dvIndex === allDocVersions.length - 1) {
+        const c1AnonReads = [
+          { anonIdx: 0, maxLine: 150, maxScroll: 99, activeSeconds: 1380, completionPct: 99, completed: true  },
+          { anonIdx: 1, maxLine: 142, maxScroll: 95, activeSeconds: 1050, completionPct: 95, completed: true  },
+          { anonIdx: 2, maxLine: 120, maxScroll: 80, activeSeconds: 880,  completionPct: 80, completed: false },
+          { anonIdx: 3, maxLine: 95,  maxScroll: 63, activeSeconds: 640,  completionPct: 63, completed: false },
+          { anonIdx: 4, maxLine: 60,  maxScroll: 40, activeSeconds: 420,  completionPct: 40, completed: false },
+          { anonIdx: 5, maxLine: 35,  maxScroll: 23, activeSeconds: 210,  completionPct: 23, completed: false },
+          { anonIdx: 6, maxLine: 12,  maxScroll: 8,  activeSeconds: 90,   completionPct: 8,  completed: false },
+          { anonIdx: 7, maxLine: 5,   maxScroll: 3,  activeSeconds: 30,   completionPct: 3,  completed: false },
+        ];
+        for (const r of c1AnonReads) {
+          const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 5).toISOString() : null;
+          await sql`
+            INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
+            VALUES (${anonSessionIds[r.anonIdx]}, ${c1Id}, ${r.maxLine}, ${r.maxScroll}, ${r.activeSeconds}, ${r.completionPct}, ${completedAt})
+            ON CONFLICT (reader_session_id, chapter_version_id) DO UPDATE SET
+              max_line_seen = EXCLUDED.max_line_seen, max_scroll_percent = EXCLUDED.max_scroll_percent,
+              active_seconds = EXCLUDED.active_seconds, completion_percent = EXCLUDED.completion_percent,
+              completed_at = EXCLUDED.completed_at
+          `;
+        }
+        totalReads += c1AnonReads.length;
+      }
     }
 
     if (c2Id) {
       const [c2Ver] = await sql`SELECT rendered_html FROM chapter_versions WHERE id = ${c2Id}`;
 
-      const c2ReactionsToSeed = c2Reactions.filter(r => readerVersionIndex[r.readerIdx] === dvIndex);
+      const c2ReactionsToSeed = c2Reactions.filter(r => r.versionIdx === dvIndex);
       for (const r of c2ReactionsToSeed) {
         const ri = r.readerIdx;
         const wp = feedbackWordPos(c2Ver.rendered_html, r.selectedText);
@@ -633,13 +869,15 @@ async function main() {
       }
       totalComments += c2CommentsToSeed.length;
 
-      // Reads for c2
-      const c2Reads = [
+      // Reads for c2 — known readers (only on their assigned version)
+      const c2KnownReads = [
         { sessionIdx: 0, maxLine: 108, maxScroll: 97, activeSeconds: 980,  completionPct: 97, completed: true  },
         { sessionIdx: 1, maxLine: 68,  maxScroll: 61, activeSeconds: 490,  completionPct: 61, completed: false },
         { sessionIdx: 2, maxLine: 44,  maxScroll: 40, activeSeconds: 320,  completionPct: 40, completed: false },
       ];
-      for (const r of c2Reads) {
+      const c2ReadVersions: Record<number, number> = { 0: 4, 1: 4, 2: 4 };
+      const c2ReadsToSeed = c2KnownReads.filter(r => c2ReadVersions[r.sessionIdx] === dvIndex);
+      for (const r of c2ReadsToSeed) {
         const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 7).toISOString() : null;
         await sql`
           INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
@@ -650,7 +888,81 @@ async function main() {
             completed_at = EXCLUDED.completed_at
         `;
       }
-      totalReads += c2Reads.length;
+      totalReads += c2ReadsToSeed.length;
+
+      // Anonymous reads for c2 — only on latest version
+      if (dvIndex === allDocVersions.length - 1) {
+        const c2AnonReads = [
+          { anonIdx: 0, maxLine: 110, maxScroll: 99, activeSeconds: 920,  completionPct: 99, completed: true  },
+          { anonIdx: 1, maxLine: 105, maxScroll: 95, activeSeconds: 870,  completionPct: 95, completed: true  },
+          { anonIdx: 2, maxLine: 88,  maxScroll: 80, activeSeconds: 650,  completionPct: 80, completed: false },
+          { anonIdx: 3, maxLine: 55,  maxScroll: 50, activeSeconds: 380,  completionPct: 50, completed: false },
+          { anonIdx: 4, maxLine: 30,  maxScroll: 27, activeSeconds: 200,  completionPct: 27, completed: false },
+          { anonIdx: 5, maxLine: 10,  maxScroll: 9,  activeSeconds: 70,   completionPct: 9,  completed: false },
+        ];
+        for (const r of c2AnonReads) {
+          const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 5).toISOString() : null;
+          await sql`
+            INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
+            VALUES (${anonSessionIds[r.anonIdx]}, ${c2Id}, ${r.maxLine}, ${r.maxScroll}, ${r.activeSeconds}, ${r.completionPct}, ${completedAt})
+            ON CONFLICT (reader_session_id, chapter_version_id) DO UPDATE SET
+              max_line_seen = EXCLUDED.max_line_seen, max_scroll_percent = EXCLUDED.max_scroll_percent,
+              active_seconds = EXCLUDED.active_seconds, completion_percent = EXCLUDED.completion_percent,
+              completed_at = EXCLUDED.completed_at
+          `;
+        }
+        totalReads += c2AnonReads.length;
+      }
+    }
+
+    // Reads for c3 — only on latest version
+    if (c3Id && dvIndex === allDocVersions.length - 1) {
+      const c3Reads = [
+        // Known readers: Diana and Marcus continued; Sofia dropped off
+        { sid: sessionIds[0], maxLine: 80, maxScroll: 95, activeSeconds: 760, completionPct: 95, completed: true  },
+        { sid: sessionIds[1], maxLine: 75, maxScroll: 90, activeSeconds: 680, completionPct: 90, completed: true  },
+        // Anonymous readers: gradual drop-off
+        { sid: anonSessionIds[0], maxLine: 82, maxScroll: 98, activeSeconds: 810, completionPct: 98, completed: true  },
+        { sid: anonSessionIds[1], maxLine: 70, maxScroll: 83, activeSeconds: 560, completionPct: 83, completed: false },
+        { sid: anonSessionIds[2], maxLine: 45, maxScroll: 54, activeSeconds: 340, completionPct: 54, completed: false },
+        { sid: anonSessionIds[3], maxLine: 20, maxScroll: 24, activeSeconds: 150, completionPct: 24, completed: false },
+        { sid: anonSessionIds[4], maxLine: 8,  maxScroll: 10, activeSeconds: 60,  completionPct: 10, completed: false },
+      ];
+      for (const r of c3Reads) {
+        const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 4).toISOString() : null;
+        await sql`
+          INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
+          VALUES (${r.sid}, ${c3Id}, ${r.maxLine}, ${r.maxScroll}, ${r.activeSeconds}, ${r.completionPct}, ${completedAt})
+          ON CONFLICT (reader_session_id, chapter_version_id) DO UPDATE SET
+            max_line_seen = EXCLUDED.max_line_seen, max_scroll_percent = EXCLUDED.max_scroll_percent,
+            active_seconds = EXCLUDED.active_seconds, completion_percent = EXCLUDED.completion_percent,
+            completed_at = EXCLUDED.completed_at
+        `;
+      }
+      totalReads += c3Reads.length;
+    }
+
+    // Reads for chapter X — only on latest version
+    if (cXId && dvIndex === allDocVersions.length - 1) {
+      const cXReads = [
+        // Only Diana made it this far
+        { sid: sessionIds[0], maxLine: 40, maxScroll: 92, activeSeconds: 420, completionPct: 92, completed: true  },
+        { sid: anonSessionIds[0], maxLine: 38, maxScroll: 88, activeSeconds: 380, completionPct: 88, completed: true  },
+        { sid: anonSessionIds[1], maxLine: 22, maxScroll: 51, activeSeconds: 200, completionPct: 51, completed: false },
+        { sid: anonSessionIds[3], maxLine: 6,  maxScroll: 14, activeSeconds: 45,  completionPct: 14, completed: false },
+      ];
+      for (const r of cXReads) {
+        const completedAt = r.completed ? new Date(Date.now() - Math.random() * 86400000 * 3).toISOString() : null;
+        await sql`
+          INSERT INTO chapter_reads (reader_session_id, chapter_version_id, max_line_seen, max_scroll_percent, active_seconds, completion_percent, completed_at)
+          VALUES (${r.sid}, ${cXId}, ${r.maxLine}, ${r.maxScroll}, ${r.activeSeconds}, ${r.completionPct}, ${completedAt})
+          ON CONFLICT (reader_session_id, chapter_version_id) DO UPDATE SET
+            max_line_seen = EXCLUDED.max_line_seen, max_scroll_percent = EXCLUDED.max_scroll_percent,
+            active_seconds = EXCLUDED.active_seconds, completion_percent = EXCLUDED.completion_percent,
+            completed_at = EXCLUDED.completed_at
+        `;
+      }
+      totalReads += cXReads.length;
     }
   }
 

@@ -8,6 +8,7 @@ function ReadPageInner() {
   const searchParams = useSearchParams();
   const inviteToken = searchParams.get('invite') ?? undefined;
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [workId, setWorkId] = useState<string | null>(null);
 
   useEffect(() => {
     const createOrResumeSession = async () => {
@@ -26,6 +27,7 @@ function ReadPageInner() {
         localStorage.setItem('anonymousId', data.anonymousId);
         localStorage.setItem('sessionId', data.sessionId);
         setSessionId(data.sessionId);
+        setWorkId(data.workId);
       } catch (error) {
         console.error('Error creating session:', error);
       }
@@ -34,7 +36,7 @@ function ReadPageInner() {
     createOrResumeSession();
   }, []);
 
-  return <ReaderView sessionId={sessionId} />;
+  return <ReaderView sessionId={sessionId} workId={workId} />;
 }
 
 export default function ReadPage() {

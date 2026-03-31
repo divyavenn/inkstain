@@ -7,6 +7,7 @@ import { Chapter } from '@/types';
 import LikesHeatmapView, { HeatmapRange } from './LikesHeatmapView';
 import CommentsView from './CommentsView';
 import VersionTimeline from './VersionTimeline';
+import RetentionView, { RetentionData, InterestSignup } from './RetentionView';
 
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
@@ -15,7 +16,7 @@ const SURFACE_TEXTURE = css`
   background-repeat: repeat;
   background-size: 100px 100px;
 `;
-const INACTIVE_TAB_SURFACE = '#e2ddd4';
+const INACTIVE_TAB_SURFACES = ['#d0ccc4', '#b5b2ad', '#9a9997'];
 
 /* ─── Desktop ────────────────────────────────────────────────────────────── */
 
@@ -46,27 +47,23 @@ const TAB_H = 50;
 const CORNER_TAB_W = 179; /* corner_tab.svg: 579×162 scaled to h=50 */
 const FOLDER_TAB_W = 201; /* folder_tab.svg: 652×162 scaled to h=50 */
 const TAB_OVERLAP = 22;   /* shoulder width at this scale */
+const INACTIVE_OVERLAP = 8; /* smaller overlap between inactive tabs */
 
 const TabRow = styled.div`
   position: relative;
   display: flex;
   align-items: flex-end;
   z-index: 3;
-
-  /* every tab after the first pulls left so active shoulder overlaps inactive */
-  & > * + * {
-    margin-left: -${TAB_OVERLAP}px;
-  }
 `;
 
-const InactiveTab = styled.button`
+const InactiveTab = styled.button<{ $dist?: number }>`
   position: relative;
-  height: ${TAB_H}px;
+  height: ${TAB_H - 10}px;
   padding: 0 1.6rem;
   border: none;
   border-radius: 6px 6px 0 0;
   ${SURFACE_TEXTURE}
-  background-color: ${INACTIVE_TAB_SURFACE};
+  background-color: ${p => INACTIVE_TAB_SURFACES[Math.min((p.$dist ?? 1) - 1, INACTIVE_TAB_SURFACES.length - 1)]};
   color: rgba(26,26,24,0.45);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.75rem;
@@ -74,7 +71,7 @@ const InactiveTab = styled.button`
   text-transform: uppercase;
   font-weight: 400;
   cursor: pointer;
-  z-index: 1;
+  z-index: ${p => Math.max(0, 3 - (p.$dist ?? 1))};
 
   &:hover {
     background-color: #ebe6dd;
@@ -409,7 +406,7 @@ const FilterSelect = styled.select`
   }
 `;
 
-type ViewType = 'likes' | 'comments';
+type ViewType = 'likes' | 'comments' | 'retention';
 
 interface HeatmapLine {
   lineNumber: number;
@@ -446,6 +443,9 @@ interface DashSuggestion {
   reader_name: string | null;
 }
 
+/* ─── Retention view ──────────────────────────────────────────────────── */
+
+
 export default function AuthorDashboard() {
   const [loading, setLoading] = useState(true);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -465,16 +465,20 @@ export default function AuthorDashboard() {
   const [totalDislikes, setTotalDislikes] = useState(0);
   const [dashComments, setDashComments] = useState<DashComment[]>([]);
   const [dashSuggestions, setDashSuggestions] = useState<DashSuggestion[]>([]);
+  const [retentionData, setRetentionData] = useState<RetentionData | null>(null);
+  const [interestSignups, setInterestSignups] = useState<InterestSignup[]>([]);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [filterValue, setFilterValue] = useState('all');
   const [readers, setReaders] = useState<{ id: string; display_name: string }[]>([]);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+  const [chapterIdsAtCommit, setChapterIdsAtCommit] = useState<string[] | null>(null);
 
   useEffect(() => {
     fetchChapters();
     fetchReadersAndGroups();
+    fetchInterestSignups();
     setLoading(false);
   }, []);
 
@@ -571,6 +575,39 @@ export default function AuthorDashboard() {
     } catch { /* ignore */ }
   };
 
+  const fetchRetention = async (versionId: string) => {
+    try {
+      const res = await fetch(`/api/dashboard/chapter-versions/${versionId}/retention`);
+      if (res.status === 401) { setNeedsLogin(true); return; }
+      if (res.ok) setRetentionData(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  const fetchInterestSignups = async () => {
+    try {
+      const res = await fetch('/api/dashboard/interest-signups');
+      if (res.ok) {
+        const data = await res.json();
+        setInterestSignups(data.signups || []);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleDeleteFeedback = async (id: string, type: 'comment' | 'suggestion') => {
+    try {
+      const res = await fetch(`/api/dashboard/feedback/${id}?type=${type}`, { method: 'DELETE' });
+      if (res.ok) {
+        if (type === 'comment') {
+          setDashComments(prev => prev.filter(c => c.id !== id));
+        } else {
+          setDashSuggestions(prev => prev.filter(s => s.id !== id));
+        }
+      }
+    } catch (err) {
+      console.error('Delete feedback error:', err);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -623,6 +660,14 @@ export default function AuthorDashboard() {
         setChapterVersionId(data.versionId);
         fetchHeatmap(data.versionId, filterValue);
         fetchChapterFeedback(data.versionId, filterValue);
+        fetchRetention(data.versionId);
+      }
+
+      // Track which chapters exist at this commit (null = show all / latest)
+      if (data.chapterIdsAtCommit) {
+        setChapterIdsAtCommit(data.chapterIdsAtCommit);
+      } else if (!commitSha) {
+        setChapterIdsAtCommit(null); // latest version: show all
       }
 
       if (!commitSha) {
@@ -651,23 +696,30 @@ export default function AuthorDashboard() {
       <Shell>
         {/* Tab row sits at the top of the shell */}
         <TabRow>
-          {activeView === 'likes' ? (
-            <ActiveTabWrap $w={CORNER_TAB_W}>
-              <ActiveTabSurface $mask="/corner_tab.svg" />
-              <ActiveTabLabel>Heatmap</ActiveTabLabel>
-            </ActiveTabWrap>
-          ) : (
-            <InactiveTab onClick={() => setActiveView('likes')}>Heatmap</InactiveTab>
-          )}
-
-          {activeView === 'comments' ? (
-            <ActiveTabWrap $w={FOLDER_TAB_W}>
-              <ActiveTabSurface $mask="/folder_tab.svg" />
-              <ActiveTabLabel>Comments &amp; Edits</ActiveTabLabel>
-            </ActiveTabWrap>
-          ) : (
-            <InactiveTab onClick={() => setActiveView('comments')}>Comments &amp; Edits</InactiveTab>
-          )}
+          {(() => {
+            const tabs: { key: ViewType; label: string; w: number; mask: string }[] = [
+              { key: 'likes', label: 'Heatmap', w: CORNER_TAB_W, mask: '/corner_tab.svg' },
+              { key: 'comments', label: 'Comments & Edits', w: FOLDER_TAB_W, mask: '/folder_tab.svg' },
+              { key: 'retention', label: 'Retention', w: FOLDER_TAB_W, mask: '/folder_tab.svg' },
+            ];
+            const activeIdx = tabs.findIndex(t => t.key === activeView);
+            return tabs.map((tab, i) => {
+              // First tab has no margin; tabs adjacent to active get full overlap; others get small overlap
+              const ml = i === 0 ? 0 : (i === activeIdx || i - 1 === activeIdx) ? -TAB_OVERLAP : -INACTIVE_OVERLAP;
+              if (tab.key === activeView) {
+                return (
+                  <ActiveTabWrap key={tab.key} $w={tab.w} style={{ marginLeft: ml }}>
+                    <ActiveTabSurface $mask={tab.mask} />
+                    <ActiveTabLabel>{tab.label}</ActiveTabLabel>
+                  </ActiveTabWrap>
+                );
+              }
+              const dist = Math.abs(i - activeIdx);
+              return (
+                <InactiveTab key={tab.key} $dist={dist} style={{ marginLeft: ml }} onClick={() => setActiveView(tab.key)}>{tab.label}</InactiveTab>
+              );
+            });
+          })()}
 
           {(readers.length > 0 || groups.length > 0) && (
             <FilterArea>
@@ -758,7 +810,11 @@ export default function AuthorDashboard() {
                             suggestions={dashSuggestions}
                             chapterId={contentChapterId ?? ''}
                             chapterVersionId={chapterVersionId ?? ''}
+                            onDelete={handleDeleteFeedback}
                           />
+                        )}
+                        {activeView === 'retention' && (
+                          <RetentionView data={retentionData} signups={interestSignups} chapterHtml={chapterHtml} />
                         )}
                       </ContentTransition>
                     </AnimatePresence>
@@ -777,7 +833,7 @@ export default function AuthorDashboard() {
               <SidebarTitle>Chapters</SidebarTitle>
             </SidebarHeader>
             <ChapterList>
-              {chapters.map(chapter => (
+              {chapters.filter(ch => !chapterIdsAtCommit || chapterIdsAtCommit.includes(ch.id)).map(chapter => (
                 <ChapterItem
                   key={chapter.id}
                   $active={chapter.id === selectedChapterId}

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                rp.display_name as reader_name
         FROM feedback_reactions fr
         LEFT JOIN reader_profiles rp ON rp.id = fr.reader_profile_id
-        WHERE fr.chapter_version_id = ANY(${allVersionIds})
+        WHERE fr.chapter_version_id = ${chapterVersionId}
           AND fr.word_start IS NOT NULL AND fr.word_end IS NOT NULL
           ${readerProfileId ? sql`AND fr.reader_profile_id = ${readerProfileId}` : sql``}
           ${readerGroupId ? sql`AND fr.reader_group_id = ${readerGroupId}` : sql``}

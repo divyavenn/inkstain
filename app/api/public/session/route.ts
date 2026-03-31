@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         sessionId: result.id,
         anonymousId: result.anonymous_id,
+        workId,
         readerProfileId: result.reader_profile_id,
         readerGroupId: result.reader_group_id,
         readerInviteId: result.reader_invite_id,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       sessionId: result.id,
       anonymousId: result.anonymous_id,
+      workId,
       readerProfileId: result.reader_profile_id,
       readerGroupId: result.reader_group_id,
       readerInviteId: result.reader_invite_id,

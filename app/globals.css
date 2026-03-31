@@ -27,3 +27,12 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Hide scrollbars but keep scrolling */
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

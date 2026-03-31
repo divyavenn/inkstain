@@ -9,8 +9,8 @@ const BLUE_INK_LIGHT = 'rgba(43,87,151,0.55)';
 const RED_INK = '#b92828';
 
 // Face SVGs from /public — randomly chosen per feedback item
-const GOOD_FACES = ['/good1.svg', '/good2.svg', '/good3.svg'];
-const MEH_FACES = ['/meh1.svg', '/meh2.svg'];
+const GOOD_FACES = ['/good1.svg'];
+const MEH_FACES = ['/meh1.svg'];
 
 function seedHash(seed: string): number {
   let hash = 0;
@@ -201,8 +201,8 @@ const MarginNoteEl = styled.div<{ $isPending?: boolean; $side?: 'left' | 'right'
   pointer-events: ${p => p.$isPending ? 'none' : 'auto'};
   cursor: ${p => p.$isPending ? 'default' : 'text'};
   ${p => p.$side === 'left'
-    ? 'left: auto; right: -1.125rem;'
-    : 'left: -1.125rem;'}
+    ? 'left: auto; right: -1.8rem; text-align: right;'
+    : 'left: -1.8rem;'}
 `;
 
 const MarginFaceImg = styled.img`
@@ -400,9 +400,70 @@ const NavButton = styled.button`
   &:active { scale: 0.96; }
 `;
 
+const EmailSection = styled.div`
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 3rem 0 1rem;
+  text-align: center;
+  font-family: var(--font-inter), system-ui, sans-serif;
+`;
+
+const EmailTitle = styled.div`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.3rem;
+  color: #1a1a18;
+  margin-bottom: 0.3rem;
+`;
+
+const EmailSubtitle = styled.div`
+  font-size: 0.82rem;
+  color: rgba(26,26,24,0.45);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+`;
+
+const EmailRow = styled.form`
+  display: flex;
+  gap: 0.5rem;
+`;
+
+const EmailInput = styled.input`
+  flex: 1;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(26,26,24,0.18);
+  border-radius: 6px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: #1a1a18;
+  outline: none;
+  transition-property: border-color;
+  transition-duration: 0.15s;
+  &:focus { border-color: rgba(26,26,24,0.45); }
+  &::placeholder { color: rgba(26,26,24,0.3); }
+`;
+
+const EmailSubmitBtn = styled.button`
+  padding: 0.6rem 1.25rem;
+  background: #1a1a18;
+  color: #f2ede4;
+  border: none;
+  border-radius: 6px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition-property: background, scale;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+  &:hover { background: #333330; }
+  &:active { scale: 0.96; }
+  &:disabled { opacity: 0.5; cursor: default; }
+`;
+
 interface ChapterReaderProps {
   chapterId: string;
   sessionId: string | null;
+  workId: string | null;
   prefetchedData?: Record<string, unknown>;
   prevChapterId: string | null;
   nextChapterId: string | null;
@@ -480,14 +541,14 @@ function buildHighlightedHtml(
   div.innerHTML = html;
 
   const toRender = [
-    ...items.map(item => ({
+    ...items.filter(item => item.id !== focusedId || !pending).map(item => ({
       charStart: item.charStart,
       charLength: item.charLength,
       cssClass: `highlight-${item.type}`,
       id: item.id,
       suggestedText: item.type === 'suggestion' ? item.suggestedText : undefined,
     })),
-    ...(pending ? [{ charStart: pending.charStart, charLength: pending.charLength, cssClass: `highlight-${pending.mode}`, id: '__pending__', suggestedText: undefined }] : []),
+    ...(pending ? [{ charStart: pending.charStart, charLength: pending.charLength, cssClass: `highlight-${pending.mode}`, id: focusedId ?? '__pending__', suggestedText: undefined }] : []),
   ].sort((a, b) => a.charStart - b.charStart);
 
   for (const item of toRender) {
@@ -657,7 +718,7 @@ function findMinimalDiff(original: string, current: string): {
 // Margin layout collision avoidance (unified for faces + comments)
 const MARGIN_LINE_PX = 32;   // approx px per line at 1.4rem Caveat, line-height 1.4
 const MARGIN_CHARS_PER_LINE = 18; // approx chars fitting in margin column
-const MARGIN_NOTE_GAP = 8;   // min gap between adjacent items
+const MARGIN_NOTE_GAP = 4;   // min gap between adjacent items
 const FACE_HEIGHT_PX = 48;
 
 function computeItemHeight(item: { type: string; comment?: string }): number {
@@ -669,13 +730,29 @@ function computeItemHeight(item: { type: string; comment?: string }): number {
 function resolveMarginPositions(
   items: Array<{ id: string; anchorY: number; heightPx: number }>
 ): Map<string, number> {
+  if (items.length === 0) return new Map();
   const sorted = [...items].sort((a, b) => a.anchorY - b.anchorY);
-  const result = new Map<string, number>();
+
+  // First pass: place each item at its anchor, pushing down only when overlapping
+  const positions: number[] = [];
   let bottomY = 0;
-  for (const item of sorted) {
-    const y = Math.max(Math.max(0, item.anchorY), bottomY);
-    result.set(item.id, y);
-    bottomY = y + item.heightPx + MARGIN_NOTE_GAP;
+  for (let i = 0; i < sorted.length; i++) {
+    const y = Math.max(Math.max(0, sorted[i].anchorY), bottomY);
+    positions.push(y);
+    bottomY = y + sorted[i].heightPx + MARGIN_NOTE_GAP;
+  }
+
+  // Second pass: pull items back up toward their anchors (bottom-up)
+  // This closes gaps left when a cluster of items got pushed down
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const minY = i === 0 ? 0 : positions[i - 1] + sorted[i - 1].heightPx + MARGIN_NOTE_GAP;
+    const ideal = Math.max(0, sorted[i].anchorY);
+    positions[i] = Math.max(minY, Math.min(positions[i], ideal));
+  }
+
+  const result = new Map<string, number>();
+  for (let i = 0; i < sorted.length; i++) {
+    result.set(sorted[i].id, positions[i]);
   }
   return result;
 }
@@ -718,7 +795,7 @@ function assignSide(
   return preferred;
 }
 
-export default function ChapterReader({ chapterId, sessionId, prefetchedData, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
+export default function ChapterReader({ chapterId, sessionId, workId, prefetchedData, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingState | null>(null);
@@ -733,6 +810,12 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   const [showHelp, setShowHelp] = useState(false);
   const [mobileCommentMode, setMobileCommentMode] = useState(false);
   const [mobileCommentText, setMobileCommentText] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem('inklink_email_submitted')) setEmailSubmitted(true);
+  }, []);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const contentRowRef = useRef<HTMLDivElement>(null);
@@ -756,6 +839,150 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   useEffect(() => { focusedIdRef.current = focusedFeedbackId; }, [focusedFeedbackId]);
   useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
   useEffect(() => { feedbackItemsRef.current = feedbackItems; }, [feedbackItems]);
+
+  // ─── Reading progress tracker ──────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionId || !workId || !chapterData) return;
+    const versionId = chapterData.versionId;
+
+    let maxScrollPercent = 0;
+    let maxLineSeen = 0;
+    let activeSeconds = 0;
+    let lastTick = Date.now();
+    let isActive = true;
+    let sent = false; // chapter_completed sent once
+
+    const countLines = () => {
+      const el = contentRef.current;
+      if (!el) return 0;
+      const paragraphs = el.querySelectorAll('p, blockquote, h1, h2, h3, h4, h5, h6');
+      return paragraphs.length;
+    };
+
+    const computeProgress = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        const pct = Math.min(100, Math.round((scrollTop / docHeight) * 100));
+        if (pct > maxScrollPercent) maxScrollPercent = pct;
+      }
+
+      // Estimate lines seen: count paragraph-level elements above viewport bottom
+      const el = contentRef.current;
+      if (el) {
+        const viewBottom = window.scrollY + window.innerHeight;
+        const paragraphs = el.querySelectorAll('p, blockquote, h1, h2, h3, h4, h5, h6');
+        let linesAbove = 0;
+        paragraphs.forEach(p => {
+          const rect = p.getBoundingClientRect();
+          if (rect.top + window.scrollY < viewBottom) linesAbove++;
+        });
+        if (linesAbove > maxLineSeen) maxLineSeen = linesAbove;
+      }
+    };
+
+    const flush = (eventType = 'heartbeat') => {
+      const totalLines = countLines();
+      const completionPercent = totalLines > 0 ? Math.min(100, Math.round((maxLineSeen / totalLines) * 100)) : 0;
+
+      fetch('/api/public/events/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId, workId,
+          events: [{
+            eventType,
+            chapterVersionId: versionId,
+            payload: { maxScrollPercent, maxLineSeen, activeSeconds, completionPercent },
+          }],
+        }),
+      }).catch(() => {});
+
+      // Send chapter_completed once when reader reaches 90%+
+      if (!sent && completionPercent >= 90) {
+        sent = true;
+        fetch('/api/public/events/batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId, workId,
+            events: [{
+              eventType: 'chapter_completed',
+              chapterVersionId: versionId,
+              payload: { maxScrollPercent, maxLineSeen, activeSeconds, completionPercent },
+            }],
+          }),
+        }).catch(() => {});
+      }
+    };
+
+    // Send initial chapter_viewed
+    flush('chapter_viewed');
+
+    // Track active time
+    const tickInterval = setInterval(() => {
+      const now = Date.now();
+      if (isActive) activeSeconds += Math.round((now - lastTick) / 1000);
+      lastTick = now;
+    }, 1000);
+
+    // Heartbeat every 15s
+    const heartbeatInterval = setInterval(() => {
+      computeProgress();
+      flush();
+    }, 15000);
+
+    const onScroll = () => computeProgress();
+    const onBlur = () => { isActive = false; };
+    const onFocus = () => { isActive = true; lastTick = Date.now(); };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+
+    // Flush on page hide (tab close / navigate away)
+    const onVisChange = () => {
+      if (document.visibilityState === 'hidden') {
+        computeProgress();
+        flush();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisChange);
+
+    return () => {
+      clearInterval(tickInterval);
+      clearInterval(heartbeatInterval);
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisChange);
+      computeProgress();
+      flush();
+    };
+  }, [sessionId, workId, chapterData]);
+
+  const submitEmail = async () => {
+    if (!emailInput.trim() || !emailInput.includes('@')) return;
+    setEmailSubmitting(true);
+    try {
+      await fetch('/api/public/interest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailInput.trim(),
+          sessionId,
+          chapterVersionId: chapterData?.versionId,
+        }),
+      });
+      localStorage.setItem('inklink_email_submitted', emailInput.trim());
+      setEmailSubmitted(true);
+      showToast('Signed up!');
+    } catch {
+      // silent
+    } finally {
+      setEmailSubmitting(false);
+    }
+  };
 
   // Detect whether the device has a physical keyboard.
   // Start with media-query heuristic, then upgrade to keyboard on first
@@ -794,7 +1021,8 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   }, []);
 
   // Update innerHTML whenever feedbackItems, pending, or focusedId change (not in edit mode)
-  useEffect(() => {
+  // Must be useLayoutEffect so marks exist in DOM before the anchor-position useLayoutEffect reads them
+  useLayoutEffect(() => {
     if (!contentRef.current || !chapterData) return;
     if (editMode) return;
     contentRef.current.innerHTML = buildHighlightedHtml(chapterData.html, feedbackItems, pending, focusedFeedbackId);
@@ -803,8 +1031,10 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
   useEffect(() => { fetchChapter(); }, [chapterId]);
 
   // When sessionId arrives after the chapter is already loaded, fetch feedback
+  // (skip if fetchChapter already loaded feedback for this version)
+  const feedbackLoadedForRef = useRef<string | null>(null);
   useEffect(() => {
-    if (sessionId && chapterData?.versionId) {
+    if (sessionId && chapterData?.versionId && feedbackLoadedForRef.current !== chapterData.versionId) {
       loadSessionFeedback(chapterData.versionId);
     }
   }, [sessionId]);
@@ -820,6 +1050,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       setLoading(true);
       setPending(null);
       setFeedbackItems([]);
+      feedbackLoadedForRef.current = null;
       setFocusedFeedbackId(null);
       setEditMode(false);
       setSuggEditMeta(null);
@@ -868,6 +1099,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           suggestedText: s.suggested_text,
         })),
       ];
+      feedbackLoadedForRef.current = versionId;
       setFeedbackItems(items);
     } catch (e) {
       console.error('Error loading session feedback:', e);
@@ -1097,28 +1329,34 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         }
         return;
       }
-      // Focused highlight WITH pending (clicked existing item): handle delete, then fall through for arrows/typing/tab
+      // Focused highlight WITH pending (clicked existing item): delete = remove item, escape/enter = dismiss
       if (fid && p) {
         if (e.key === 'Backspace' || e.key === 'Delete') {
-          if (p.commentText.length > 0) {
-            // Deleting comment text
-            setPending(prev => prev ? { ...prev, commentText: prev.commentText.slice(0, -1) } : prev);
-          } else {
-            e.preventDefault();
-            setPending(null);
-            setFocusedFeedbackId(null);
-            deleteFeedbackRef.current(fid);
-          }
+          e.preventDefault();
+          setPending(null);
+          setFocusedFeedbackId(null);
+          deleteFeedbackRef.current(fid);
           return;
         }
-        // Fall through to pending handler for arrows, typing, tab, escape, enter
+        if (e.key === 'Escape' || e.key === 'Enter') {
+          e.preventDefault();
+          setPending(null);
+          setFocusedFeedbackId(null);
+          return;
+        }
+        // Ignore other keys — don't fall through to new-pending handlers
+        return;
       }
 
       if (!p) return;
 
       if (e.key === 'Escape') {
-        // For likes/dislikes: save on escape (highlight is already visible)
-        if (p.mode === 'like' || p.mode === 'dislike') {
+        if (fid) {
+          // Focused on existing item: just dismiss without saving a duplicate
+          setPending(null);
+          setFocusedFeedbackId(null);
+        } else if (p.mode === 'like' || p.mode === 'dislike') {
+          // For likes/dislikes: save on escape (highlight is already visible)
           submitPendingRef.current();
         } else {
           setPending(null);
@@ -1128,7 +1366,13 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        submitPendingRef.current();
+        if (fid) {
+          // Focused on existing item: dismiss without creating duplicate
+          setPending(null);
+          setFocusedFeedbackId(null);
+        } else {
+          submitPendingRef.current();
+        }
         return;
       }
       // Arrow key → toggle like/dislike (only when no comment yet)
@@ -1227,12 +1471,18 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       }
 
       // Click away from pending → auto-save likes/dislikes, submit comments
+      // But if we're focused on an existing item, just dismiss (don't duplicate)
       if (pendingRef.current) {
-        const p = pendingRef.current;
-        if (p.mode === 'like' || p.mode === 'dislike' || (p.mode === 'comment' && p.commentText.length > 0)) {
-          submitPendingRef.current();
-        } else {
+        if (focusedIdRef.current) {
           setPending(null);
+          setFocusedFeedbackId(null);
+        } else {
+          const p = pendingRef.current;
+          if (p.mode === 'like' || p.mode === 'dislike' || (p.mode === 'comment' && p.commentText.length > 0)) {
+            submitPendingRef.current();
+          } else {
+            setPending(null);
+          }
         }
         return;
       }
@@ -1285,7 +1535,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
       }
       return { ...item, anchorY };
     }));
-  }, [feedbackItems.map(f => f.id).join(','), editMode]);
+  }, [feedbackItems.map(f => `${f.id}:${f.anchorY !== undefined ? 1 : 0}`).join(','), editMode]);
 
   const updateNoteText = async (itemId: string, newText: string) => {
     setFeedbackItems(prev => prev.map(f => f.id === itemId ? { ...f, comment: newText } : f));
@@ -1556,6 +1806,28 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
         </ContentRow>
       </Paper>
 
+      {!emailSubmitted ? (
+        <EmailSection>
+          <EmailTitle>Enjoying this?</EmailTitle>
+          <EmailSubtitle>stay in touch with the author</EmailSubtitle>
+          <EmailRow onSubmit={e => { e.preventDefault(); submitEmail(); }}>
+            <EmailInput
+              type="email"
+              placeholder="your@email.com"
+              value={emailInput}
+              onChange={e => setEmailInput(e.target.value)}
+            />
+            <EmailSubmitBtn type="submit" disabled={emailSubmitting}>
+              {emailSubmitting ? '...' : 'Subscribe'}
+            </EmailSubmitBtn>
+          </EmailRow>
+        </EmailSection>
+      ) : (
+        <EmailSection>
+          <EmailSubtitle>You're on the list.</EmailSubtitle>
+        </EmailSection>
+      )}
+
       <ChapterNav>
         {prevChapterId
           ? <NavButton onClick={() => onNavigate(prevChapterId)}>← Previous chapter</NavButton>
@@ -1660,6 +1932,7 @@ export default function ChapterReader({ chapterId, sessionId, prefetchedData, pr
           </SuccessToast>
         )}
       </AnimatePresence>
+
     </>
   );
 }

@@ -25,6 +25,15 @@ export async function GET(
 
     const v = versions[0];
 
+    // Find which chapters exist at this commit
+    const chaptersAtCommit = await sql`
+      SELECT c.id
+      FROM chapter_versions cv
+      JOIN chapters c ON c.id = cv.chapter_id
+      JOIN document_versions dv ON dv.id = cv.document_version_id
+      WHERE dv.commit_sha = ${commitSha}
+    `;
+
     return NextResponse.json({
       version: {
         commitSha: v.commit_sha,
@@ -37,6 +46,7 @@ export async function GET(
       html: v.html,
       feedback: [],
       wordTokens: [],
+      chapterIdsAtCommit: chaptersAtCommit.map(r => r.id as string),
     });
   } catch (error) {
     console.error('Error fetching chapter version:', error);

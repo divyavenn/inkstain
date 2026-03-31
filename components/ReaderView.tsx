@@ -90,9 +90,10 @@ const ChapterItemTitle = styled.div<{ $active: boolean }>`
 
 interface ReaderViewProps {
   sessionId: string | null;
+  workId: string | null;
 }
 
-export default function ReaderView({ sessionId }: ReaderViewProps) {
+export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,6 +183,7 @@ export default function ReaderView({ sessionId }: ReaderViewProps) {
             key={currentChapterId}
             chapterId={currentChapterId}
             sessionId={sessionId}
+            workId={workId}
             prefetchedData={chapterCache.current[currentChapterId]}
             prevChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) - 1]?.id ?? null}
             nextChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) + 1]?.id ?? null}
