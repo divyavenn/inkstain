@@ -94,26 +94,11 @@ export async function runIngest(): Promise<IngestResult> {
   `;
   const workId = work.id as string;
 
-  // Load and parse all chapters
+  // Load chapters from disk and check if anything changed
   const markdownChapters = loadAllMarkdownChapters();
+  const parsedChapters = markdownChapters.map(raw => parseChapter(raw));
 
-  // No chapter files on disk → nothing to ingest
-  if (markdownChapters.length === 0) {
-    console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — no chapter files found`);
-    const [latest] = await sql`
-      SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1
-    `;
-    return {
-      workId,
-      documentVersionId: latest?.id as string ?? '',
-      chaptersIngested: 0,
-      alreadyExists: true,
-    };
-  }
-
-  // Compare against latest stored versions BEFORE creating document_version —
-  // skip entirely if nothing in chapters/ changed (avoids creating DB rows for
-  // commits that don't touch chapter content).
+  // Build a map of file_path → raw_markdown from the latest DB version
   const latestVersions = await sql`
     SELECT cv.raw_markdown, c.file_path
     FROM chapter_versions cv
@@ -123,11 +108,18 @@ export async function runIngest(): Promise<IngestResult> {
       AND dv.id = (SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1)
   `;
   const prevByFile = new Map(latestVersions.map(r => [r.file_path as string, r.raw_markdown as string]));
-  const chaptersChanged = markdownChapters.length !== prevByFile.size
-    || markdownChapters.some(ch => prevByFile.get(ch.filePath) !== ch.rawMarkdown);
+  const currFiles = new Set(parsedChapters.map(ch => ch.filePath));
 
-  if (!chaptersChanged) {
-    console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — chapter content unchanged`);
+  // Skip if: same set of files, and no file's content changed
+  const filesAdded = parsedChapters.some(ch => !prevByFile.has(ch.filePath));
+  const filesDeleted = [...prevByFile.keys()].some(fp => !currFiles.has(fp));
+  const filesModified = parsedChapters.some(ch => {
+    const prev = prevByFile.get(ch.filePath);
+    return prev !== undefined && prev !== ch.rawMarkdown;
+  });
+
+  if (!filesAdded && !filesDeleted && !filesModified) {
+    console.log(`[ingest] skip ${commitInfo.sha.slice(0, 8)} — chapters unchanged`);
     const [latest] = await sql`
       SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1
     `;
@@ -139,7 +131,7 @@ export async function runIngest(): Promise<IngestResult> {
     };
   }
 
-  // Create document version (only when chapter content has actually changed)
+  // Something changed — create a new document version with all chapters
   const [docVersion] = await sql`
     INSERT INTO document_versions (work_id, commit_sha, commit_message, commit_author, commit_created_at)
     VALUES (${workId}, ${commitInfo.sha}, ${commitInfo.message}, ${commitInfo.author}, ${commitInfo.createdAt})
@@ -150,10 +142,8 @@ export async function runIngest(): Promise<IngestResult> {
 
   let chaptersIngested = 0;
 
-  for (const rawChapter of markdownChapters) {
-    const parsed = parseChapter(rawChapter);
-
-    // Upsert chapter
+  for (const parsed of parsedChapters) {
+    // Upsert chapter row
     const [chapter] = await sql`
       INSERT INTO chapters (work_id, slug, title, file_path, sort_order)
       VALUES (${workId}, ${parsed.slug}, ${parsed.title}, ${parsed.filePath}, ${parsed.sortOrder})
