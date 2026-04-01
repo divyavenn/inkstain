@@ -108,9 +108,9 @@ export async function runIngest(): Promise<IngestResult> {
       AND dv.id = (SELECT id FROM document_versions WHERE work_id = ${workId} ORDER BY deployed_at DESC LIMIT 1)
   `;
   const prevByFile = new Map(latestVersions.map(r => [r.file_path as string, r.raw_markdown as string]));
-  const currFiles = new Set(parsedChapters.map(ch => ch.filePath));
 
-  // Skip if: same set of files, and no file's content changed
+  // Skip if no file on disk was added, deleted, or modified
+  const currFiles = new Set(parsedChapters.map(ch => ch.filePath));
   const filesAdded = parsedChapters.some(ch => !prevByFile.has(ch.filePath));
   const filesDeleted = [...prevByFile.keys()].some(fp => !currFiles.has(fp));
   const filesModified = parsedChapters.some(ch => {
