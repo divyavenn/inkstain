@@ -14,12 +14,7 @@ export interface MarkdownChapter {
 }
 
 export function loadAllMarkdownChapters(): MarkdownChapter[] {
-  let files: string[];
-  try {
-    files = fs.readdirSync(chaptersDir).filter(f => f.endsWith('.md'));
-  } catch {
-    return [];
-  }
+  const files = fs.readdirSync(chaptersDir).filter(f => f.endsWith('.md'));
 
   const chapters: MarkdownChapter[] = [];
   for (const file of files) {

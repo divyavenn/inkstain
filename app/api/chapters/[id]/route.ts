@@ -38,8 +38,6 @@ export async function GET(
       versionId: chapter.version_id,
       html: chapter.html,
       commitSha: chapter.commitSha,
-      abTests: [],
-      assignments: {},
     });
   } catch (error) {
     console.error('Error fetching chapter:', error);

@@ -44,8 +44,6 @@ export async function GET(
       versionId: v.id,
       content: v.content,
       html: v.html,
-      feedback: [],
-      wordTokens: [],
       chapterIdsAtCommit: chaptersAtCommit.map(r => r.id as string),
     });
   } catch (error) {

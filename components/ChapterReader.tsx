@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
 import { motion, AnimatePresence } from 'motion/react';
 import dynamic from 'next/dynamic';
 
@@ -14,40 +14,24 @@ const BLUE_INK = '#2b5797';
 const BLUE_INK_LIGHT = 'rgba(43,87,151,0.55)';
 const RED_INK = '#b92828';
 
-// Face SVGs from /public — randomly chosen per feedback item
-const GOOD_FACES = ['/good1.svg'];
-const MEH_FACES = ['/meh1.svg'];
-
 function seedHash(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
   return hash;
 }
 
-function pickFace(type: 'like' | 'dislike', seed: string): string {
-  const hash = Math.abs(seedHash(seed));
-  const faces = type === 'like' ? GOOD_FACES : MEH_FACES;
-  return faces[hash % faces.length];
+function pickFace(type: 'like' | 'dislike'): string {
+  return type === 'like' ? '/good1.svg' : '/meh1.svg';
 }
 
 function faceTransform(seed: string): { rotation: number; offsetY: number; offsetX: number } {
   const h = seedHash(seed);
-  // rotation: -12° to +12°
-  const rotation = ((h % 25) - 12);
-  // vertical offset: -4px to +4px
-  const offsetY = (((h >> 8) % 9) - 4);
-  // horizontal offset: -3px to +3px
-  const offsetX = (((h >> 16) % 7) - 3);
-  return { rotation, offsetY, offsetX };
+  return {
+    rotation: (h % 25) - 12,
+    offsetY: ((h >> 8) % 9) - 4,
+    offsetX: ((h >> 16) % 7) - 3,
+  };
 }
-
-const SURFACE_BASE = '#fcfcfc';
-const SURFACE_TEXTURE = css`
-  background-color: ${SURFACE_BASE};
-  background-image: url('/bg-texture.png');
-  background-repeat: repeat;
-  background-size: 100px 100px;
-`;
 
 const Paper = styled(motion.div)`
   padding: 4rem 2.5rem 6rem;
@@ -82,17 +66,6 @@ const TextColumn = styled.div`
 `;
 
 const MarginColumn = styled.div`
-  width: 200px;
-  flex-shrink: 0;
-  position: relative;
-  align-self: stretch;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
-`;
-
-const LeftMarginColumn = styled.div`
   width: 200px;
   flex-shrink: 0;
   position: relative;
@@ -479,12 +452,10 @@ interface ChapterReaderProps {
 }
 
 interface ChapterData {
-  chapter: { id: string; title: string; };
+  chapter: { id: string; title: string };
   versionId: string;
   content: string;
   html: string;
-  abTests: any[];
-  assignments: Record<string, 'A' | 'B'>;
 }
 
 type PendingMode = 'like' | 'dislike' | 'comment';
@@ -1526,7 +1497,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   const rightItems = marginItems.filter(f => f.side !== 'left').map(f => ({ id: f.id, anchorY: f.anchorY!, heightPx: computeItemHeight(f) }));
   const leftPositions = resolveMarginPositions(leftItems);
   const rightPositions = resolveMarginPositions(rightItems);
-  const pendingNoteItem = pending ? pending : null;
+
 
   // Update anchor positions for all feedback items (comments + likes/dislikes for margin faces)
   useLayoutEffect(() => {
@@ -1634,7 +1605,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <ContentRow ref={contentRowRef}>
-          <LeftMarginColumn data-margin-col="true">
+          <MarginColumn data-margin-col="true">
             {/* Left-side reaction faces */}
             {marginItems.filter(f => f.side === 'left' && (f.type === 'like' || f.type === 'dislike')).map(item => {
               const faceSeed = `${item.charStart}_${item.charLength}`;
@@ -1642,7 +1613,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               return (
                 <MarginFaceImg
                   key={item.id}
-                  src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
+                  src={pickFace(item.type as 'like' | 'dislike')}
                   alt={item.type === 'like' ? '😊' : '😕'}
                   onClick={() => focusOnItem(item.id)}
                   style={{
@@ -1690,25 +1661,25 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               </MarginNoteEl>
             ))}
             {/* Left-side pending annotation */}
-            {pendingNoteItem && pendingNoteItem.side === 'left' && !focusedFeedbackId && (
-              pendingNoteItem.mode === 'comment' ? (
+            {pending && pending.side === 'left' && !focusedFeedbackId && (
+              pending.mode === 'comment' ? (
                 <MarginNoteEl
                   $isPending
                   $side="left"
-                  style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
+                  style={{ top: Math.max(0, pending.anchorY) }}
                 >
-                  {pendingNoteItem.commentText || '…'}
+                  {pending.commentText || '…'}
                 </MarginNoteEl>
               ) : (
                 (() => {
-                  const faceSeed = `${pendingNoteItem.charStart}_${pendingNoteItem.charLength}`;
+                  const faceSeed = `${pending.charStart}_${pending.charLength}`;
                   const t = faceTransform(faceSeed);
                   return (
                     <MarginFaceImg
-                      src={pickFace(pendingNoteItem.mode as 'like' | 'dislike', faceSeed)}
-                      alt={pendingNoteItem.mode === 'like' ? '😊' : '😕'}
+                      src={pickFace(pending.mode as 'like' | 'dislike')}
+                      alt={pending.mode === 'like' ? '😊' : '😕'}
                       style={{
-                        top: Math.max(0, pendingNoteItem.anchorY) + t.offsetY,
+                        top: Math.max(0, pending.anchorY) + t.offsetY,
                         right: `calc(-2.75rem + ${t.offsetX}px)`,
                         transform: `rotate(${t.rotation}deg)`,
                       }}
@@ -1717,7 +1688,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                 })()
               )
             )}
-          </LeftMarginColumn>
+          </MarginColumn>
           <TextColumn ref={textColRef}>
             <ChapterTitle>{chapterData.chapter.title}</ChapterTitle>
             <ChapterContent
@@ -1737,7 +1708,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               return (
                 <MarginFaceImg
                   key={item.id}
-                  src={pickFace(item.type as 'like' | 'dislike', faceSeed)}
+                  src={pickFace(item.type as 'like' | 'dislike')}
                   alt={item.type === 'like' ? '😊' : '😕'}
                   onClick={() => focusOnItem(item.id)}
                   style={{
@@ -1785,25 +1756,25 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
               </MarginNoteEl>
             ))}
             {/* Right-side pending annotation */}
-            {pendingNoteItem && pendingNoteItem.side !== 'left' && !focusedFeedbackId && (
-              pendingNoteItem.mode === 'comment' ? (
+            {pending && pending.side !== 'left' && !focusedFeedbackId && (
+              pending.mode === 'comment' ? (
                 <MarginNoteEl
                   $isPending
                   $side="right"
-                  style={{ top: Math.max(0, pendingNoteItem.anchorY) }}
+                  style={{ top: Math.max(0, pending.anchorY) }}
                 >
-                  {pendingNoteItem.commentText || '…'}
+                  {pending.commentText || '…'}
                 </MarginNoteEl>
               ) : (
                 (() => {
-                  const faceSeed = `${pendingNoteItem.charStart}_${pendingNoteItem.charLength}`;
+                  const faceSeed = `${pending.charStart}_${pending.charLength}`;
                   const t = faceTransform(faceSeed);
                   return (
                     <MarginFaceImg
-                      src={pickFace(pendingNoteItem.mode as 'like' | 'dislike', faceSeed)}
-                      alt={pendingNoteItem.mode === 'like' ? '😊' : '😕'}
+                      src={pickFace(pending.mode as 'like' | 'dislike')}
+                      alt={pending.mode === 'like' ? '😊' : '😕'}
                       style={{
-                        top: Math.max(0, pendingNoteItem.anchorY) + t.offsetY,
+                        top: Math.max(0, pending.anchorY) + t.offsetY,
                         left: `calc(-2.75rem + ${t.offsetX}px)`,
                         transform: `rotate(${t.rotation}deg)`,
                       }}

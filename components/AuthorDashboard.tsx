@@ -283,25 +283,6 @@ const LoadingText = styled.p`
   font-size: 0.875rem;
 `;
 
-/* ─── Pre-compute indicator ───────────────────────────────────────────────── */
-
-const PreComputeIndicator = styled.div<{ $status: 'computing' | 'complete' | 'error' }>`
-  position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: ${p => p.$status === 'error' ? 'rgba(180,40,40,0.9)' : 'rgba(26,26,24,0.88)'};
-  color: #f2ede4;
-  padding: 0.6rem 1rem;
-  border-radius: 4px;
-  box-shadow: 0 4px 20px rgba(26,26,24,0.15);
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 0.8rem;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-`;
-
 /* ─── Login overlay ───────────────────────────────────────────────────────── */
 
 const shake = keyframes`
@@ -460,8 +441,6 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
   const [loadingChapter, setLoadingChapter] = useState(false);
   const [activeView, setActiveView] = useState<ViewType>('likes');
   const [currentCommitSha, setCurrentCommitSha] = useState<string>('');
-  const [preComputeStatus, setPreComputeStatus] = useState<'idle' | 'computing' | 'complete' | 'error'>('idle');
-  const [, setPreComputeProgress] = useState(0);
   const [needsLogin, setNeedsLogin] = useState(isProtected);
   const [loginPassword, setLoginPassword] = useState('');
   const [shakeKey, setShakeKey] = useState(0);
@@ -539,31 +518,8 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
     if (selectedChapterId) {
       setDisplayedCommitSha('');
       fetchChapterContent(selectedChapterId);
-      startPreComputation(selectedChapterId);
     }
   }, [selectedChapterId]);
-
-  const startPreComputation = async (chapterId: string) => {
-    try {
-      const statusResponse = await fetch(`/api/chapters/${chapterId}/precompute`);
-      const statusData = await statusResponse.json();
-      if (statusData.status === 'complete') { setPreComputeStatus('complete'); return; }
-
-      setPreComputeStatus('computing');
-      setPreComputeProgress(0);
-
-      const response = await fetch(`/api/chapters/${chapterId}/precompute`, { method: 'POST' });
-      if (response.ok) {
-        setPreComputeStatus('complete');
-        setPreComputeProgress(100);
-      } else {
-        setPreComputeStatus('error');
-      }
-    } catch (error) {
-      console.error('Pre-computation error:', error);
-      setPreComputeStatus('error');
-    }
-  };
 
   const handleDeleteFeedback = async (id: string, type: 'comment' | 'suggestion') => {
     try {
@@ -806,12 +762,6 @@ export default function AuthorDashboard({ isProtected = false }: { isProtected?:
         </Panel>
       </Shell>
 
-      {preComputeStatus !== 'idle' && preComputeStatus !== 'complete' && (
-        <PreComputeIndicator $status={preComputeStatus}>
-          {preComputeStatus === 'computing' && 'Pre-computing versions...'}
-          {preComputeStatus === 'error' && 'Pre-computation failed'}
-        </PreComputeIndicator>
-      )}
     </Desktop>
     {needsLogin && (
       <LoginOverlay>
