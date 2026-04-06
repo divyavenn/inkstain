@@ -3,8 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { AnimatePresence, motion } from 'framer-motion';
+import dynamic from 'next/dynamic';
 import { Chapter } from '@/types';
 import ChapterReader from './ChapterReader';
+
+const DotLottiePlayer = dynamic(
+  () => import('@dotlottie/react-player').then(m => m.DotLottiePlayer),
+  { ssr: false },
+);
 
 const SURFACE_BASE = '#fcfcfc';
 const SURFACE_TEXTURE = css`
@@ -138,7 +144,11 @@ export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
     }
   };
 
-  if (loading) return <Page />;
+  if (loading) return (
+    <Page style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <DotLottiePlayer src="/loading.lottie" autoplay loop style={{ width: 120, height: 120 }} />
+    </Page>
+  );
 
   return (
     <Page>

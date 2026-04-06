@@ -24,18 +24,21 @@ const Page = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   padding: 6rem 8vw;
 `;
 
 const Layout = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3rem;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 4rem;
   max-width: 1200px;
+  width: 100%;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 2rem;
   }
 `;
 
@@ -159,6 +162,8 @@ const Right = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 1;
+  min-width: 0;
 
   @media (max-width: 768px) {
     display: none;
@@ -182,7 +187,8 @@ const Footer = styled.footer`
 `;
 
 const DemoVideo = styled.video`
-  width: 50vw;
+  max-width: 100%;
+  height: auto;
   border-radius: 8px;
   box-shadow: 0 32px 80px rgba(26, 26, 24, 0.2);
 `;

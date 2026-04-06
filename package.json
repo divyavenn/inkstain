@@ -10,6 +10,7 @@
     "seed": "npx tsx --env-file=.env.local scripts/seed.ts"
   },
   "dependencies": {
+    "@dotlottie/react-player": "^1.6.19",
     "@neondatabase/serverless": "^1.0.2",
     "framer-motion": "^11.11.17",
     "gray-matter": "^4.0.3",
@@ -17,7 +18,6 @@
     "lru-cache": "^11.2.4",
     "marked": "^14.1.3",
     "motion": "^12.38.0",
-
     "nanoid": "^5.0.8",
     "next": "^15.0.3",
     "react": "^18.3.1",

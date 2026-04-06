@@ -3,6 +3,12 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import { motion, AnimatePresence } from 'motion/react';
+import dynamic from 'next/dynamic';
+
+const DotLottiePlayer = dynamic(
+  () => import('@dotlottie/react-player').then(m => m.DotLottiePlayer),
+  { ssr: false },
+);
 
 const BLUE_INK = '#2b5797';
 const BLUE_INK_LIGHT = 'rgba(43,87,151,0.55)';
@@ -276,8 +282,9 @@ const HelpOverlay = styled(motion.div)`
   background: rgba(0,0,0,0.25);
   z-index: 10001;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 1rem;
 `;
 
 const HelpContent = styled(motion.div)`
@@ -294,6 +301,7 @@ const HelpContent = styled(motion.div)`
   font-size: 0.82rem;
   color: #2a2a26;
   line-height: 1.6;
+  transform-origin: top right;
 `;
 
 const ShortcutRow = styled.div`
@@ -807,7 +815,11 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [hasKeyboard, setHasKeyboard] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showHelp, setShowHelp] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('inklink-help-seen');
+  });
+  const helpBtnRef = useRef<HTMLButtonElement>(null);
   const [mobileCommentMode, setMobileCommentMode] = useState(false);
   const [mobileCommentText, setMobileCommentText] = useState('');
   const [emailInput, setEmailInput] = useState('');
@@ -1004,7 +1016,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   // Close help modal on Escape
   useEffect(() => {
     if (!showHelp) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowHelp(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setShowHelp(false); localStorage.setItem('inklink-help-seen', '1'); } };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [showHelp]);
@@ -1553,11 +1565,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
   if (loading) {
     return (
-      <Paper initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <p style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', color: '#9a9892', fontSize: '0.9rem' }}>
-          Loading chapter...
-        </p>
-      </Paper>
+      <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <DotLottiePlayer src="/loading.lottie" autoplay loop style={{ width: 120, height: 120 }} />
+      </div>
     );
   }
 
@@ -1573,20 +1583,20 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
   return (
     <>
-      <HelpButton onClick={() => setShowHelp(true)}>?</HelpButton>
+      <HelpButton ref={helpBtnRef} onClick={() => setShowHelp(true)}>?</HelpButton>
 
       <AnimatePresence>
         {showHelp && (
           <HelpOverlay
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowHelp(false)}
+            exit={{ opacity: 0, transition: { duration: 0.2, delay: 0.05 } }}
+            onClick={() => { setShowHelp(false); localStorage.setItem('inklink-help-seen', '1'); }}
           >
             <HelpContent
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+              initial={{ opacity: 0, scale: 0.2, borderRadius: '50%' }}
+              animate={{ opacity: 1, scale: 1, borderRadius: '12px', transition: { type: 'spring', stiffness: 500, damping: 32 } }}
+              exit={{ opacity: 0, scale: 0.2, borderRadius: '50%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
               onClick={e => e.stopPropagation()}
             >
               <div style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: '0.75rem', color: '#1a1a18' }}>
