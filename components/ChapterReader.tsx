@@ -124,14 +124,10 @@ const ChapterContent = styled.div`
     animation: pendingPulse 2s ease-in-out infinite;
   }
 
-  mark.highlight-like, mark.highlight-dislike {
+  mark.highlight-like, mark.highlight-dislike, mark.highlight-comment {
     background: linear-gradient(to right, rgba(253,224,71,0.14), rgba(253,224,71,0.45) 4%, rgba(253,224,71,0.25));
-    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
-    -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
-  }
-  mark.highlight-comment {
-    background: linear-gradient(to right, rgba(253,224,71,0.14), rgba(253,224,71,0.45) 4%, rgba(253,224,71,0.25));
-    border-radius: 0.8em 0.3em; padding: 0.1em 0.4em; margin: 0 -0.4em;
+    padding: 0; margin: 0; border-radius: 0.3em;
+    box-shadow: 0.4em 0 0 rgba(253,224,71,0.25), -0.4em 0 0 rgba(253,224,71,0.14);
     -webkit-box-decoration-break: clone; box-decoration-break: clone; cursor: pointer;
   }
   mark.highlight-suggestion {
@@ -359,8 +355,107 @@ const DesktopHint = styled(motion.div)`
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 0.7rem;
   color: rgba(26,26,24,0.35);
-  pointer-events: none;
   z-index: 100;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const HintDeleteBtn = styled.button`
+  background: none;
+  border: 1px solid rgba(26,26,24,0.15);
+  border-radius: 4px;
+  color: rgba(26,26,24,0.45);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+  transition-property: color, border-color;
+  transition-duration: 0.12s;
+  &:hover { color: #b92828; border-color: rgba(185,40,40,0.3); }
+`;
+
+const SelectionToolbar = styled(motion.div)`
+  position: fixed;
+  display: flex;
+  background: rgba(252, 250, 245, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(26,26,24,0.08);
+  border-radius: 4px;
+  padding: 0.25rem;
+  gap: 1px;
+  z-index: 10000;
+  align-items: center;
+`;
+
+const ToolbarBtn = styled.button<{ $active?: boolean }>`
+  background: ${p => p.$active ? 'rgba(26,26,24,0.08)' : 'transparent'};
+  border: 1px solid ${p => p.$active ? 'rgba(26,26,24,0.15)' : 'transparent'};
+  color: #2a2a26;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 0.72rem;
+  font-style: italic;
+  padding: 0.3rem 0.55rem;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition-property: background, border-color, box-shadow;
+  transition-duration: 0.1s;
+  transition-timing-function: ease;
+  &:hover {
+    background: rgba(26,26,24,0.06);
+    border-color: rgba(26,26,24,0.12);
+  }
+  &:active {
+    background: rgba(26,26,24,0.1);
+    box-shadow: inset 0 1px 2px rgba(26,26,24,0.08);
+  }
+`;
+
+const SearchBar = styled(motion.div)`
+  position: fixed;
+  top: 1rem;
+  right: 3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fcfcfc;
+  border: 1px solid rgba(26,26,24,0.15);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  z-index: 10001;
+  font-family: var(--font-inter), system-ui, sans-serif;
+`;
+
+const SearchInput = styled.input`
+  border: none;
+  background: transparent;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.85rem;
+  color: #1a1a18;
+  outline: none;
+  width: 180px;
+  &::placeholder { color: rgba(26,26,24,0.3); }
+`;
+
+const SearchBtn = styled.button`
+  background: none;
+  border: none;
+  color: rgba(26,26,24,0.4);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  border-radius: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  &:hover { color: #1a1a18; background: rgba(26,26,24,0.05); }
+`;
+
+const SearchCount = styled.span`
+  font-size: 0.7rem;
+  color: rgba(26,26,24,0.35);
   white-space: nowrap;
 `;
 
@@ -464,6 +559,7 @@ interface ChapterReaderProps {
   prevChapterId: string | null;
   nextChapterId: string | null;
   onNavigate: (id: string) => void;
+  contentElRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 interface ChapterData {
@@ -797,7 +893,7 @@ function assignSide(
   return preferred;
 }
 
-export default function ChapterReader({ chapterId, sessionId, workId, prefetchedData, prevChapterId, nextChapterId, onNavigate }: ChapterReaderProps) {
+export default function ChapterReader({ chapterId, sessionId, workId, prefetchedData, prevChapterId, nextChapterId, onNavigate, contentElRef }: ChapterReaderProps) {
   const [chapterData, setChapterData] = useState<ChapterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingState | null>(null);
@@ -814,8 +910,14 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     return !localStorage.getItem('inklink-help-seen');
   });
   const helpBtnRef = useRef<HTMLButtonElement>(null);
+  const [selectionRect, setSelectionRect] = useState<{ top: number; left: number; width: number; bottom: number } | null>(null);
   const [mobileCommentMode, setMobileCommentMode] = useState(false);
   const [mobileCommentText, setMobileCommentText] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatches, setSearchMatches] = useState<number[]>([]);
+  const [currentMatchIdx, setCurrentMatchIdx] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [emailInput, setEmailInput] = useState('');
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   const [emailSubmitted, setEmailSubmitted] = useState(false);
@@ -839,11 +941,14 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     if (!pending) {
       setMobileCommentMode(false);
       setMobileCommentText('');
+      setSelectionRect(null);
     }
   }, [pending]);
   useEffect(() => { editModeRef.current = editMode; }, [editMode]);
   useEffect(() => { focusedIdRef.current = focusedFeedbackId; }, [focusedFeedbackId]);
-  useEffect(() => { chapterDataRef.current = chapterData; }, [chapterData]);
+  useEffect(() => {
+    chapterDataRef.current = chapterData;
+  }, [chapterData]);
   useEffect(() => { feedbackItemsRef.current = feedbackItems; }, [feedbackItems]);
 
   // ─── Reading progress tracker ──────────────────────────────────────────
@@ -1007,6 +1112,74 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
+  // Search: find matches in text content
+  useEffect(() => {
+    if (!searchOpen || !searchQuery || !contentRef.current) {
+      setSearchMatches([]);
+      setCurrentMatchIdx(0);
+      // Remove existing search highlights
+      contentRef.current?.querySelectorAll('mark.search-match').forEach(m => {
+        const parent = m.parentNode;
+        if (parent) {
+          parent.replaceChild(document.createTextNode(m.textContent || ''), m);
+          parent.normalize();
+        }
+      });
+      return;
+    }
+
+    const text = contentRef.current.textContent || '';
+    const query = searchQuery.toLowerCase();
+    const matches: number[] = [];
+    let idx = 0;
+    while ((idx = text.toLowerCase().indexOf(query, idx)) !== -1) {
+      matches.push(idx);
+      idx += query.length;
+    }
+    setSearchMatches(matches);
+    setCurrentMatchIdx(prev => Math.min(prev, Math.max(0, matches.length - 1)));
+  }, [searchQuery, searchOpen]);
+
+  // Search: scroll to current match
+  useEffect(() => {
+    if (!contentRef.current || searchMatches.length === 0 || !searchQuery) return;
+
+    // Remove old search highlights
+    contentRef.current.querySelectorAll('mark.search-match, mark.search-match-active').forEach(m => {
+      const parent = m.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(m.textContent || ''), m);
+        parent.normalize();
+      }
+    });
+
+    // Re-apply highlights for all matches
+    // We need to re-render the HTML first to reset the DOM
+    if (chapterData) {
+      contentRef.current.innerHTML = buildHighlightedHtml(chapterData.html, feedbackItems, pending, focusedFeedbackId);
+    }
+
+    // Now apply search highlights using charWrap
+    for (let i = searchMatches.length - 1; i >= 0; i--) {
+      const isActive = i === currentMatchIdx;
+      charWrap(contentRef.current, searchMatches[i], searchQuery.length, () => {
+        const mark = document.createElement('mark');
+        mark.className = isActive ? 'search-match-active' : 'search-match';
+        mark.style.background = isActive ? 'rgba(253,180,71,0.6)' : 'rgba(253,224,71,0.3)';
+        mark.style.padding = '0';
+        mark.style.margin = '0';
+        mark.style.borderRadius = '2px';
+        return mark;
+      });
+    }
+
+    // Scroll to active match
+    const active = contentRef.current.querySelector('mark.search-match-active');
+    if (active) {
+      active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentMatchIdx, searchMatches]);
+
   // Close help modal on Escape
   useEffect(() => {
     if (!showHelp) return;
@@ -1014,6 +1187,34 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [showHelp]);
+
+  // Double-click on existing highlight → edit that feedback item
+  useEffect(() => {
+    const handleDblClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const mark = target.closest('mark[data-feedback-id]') as HTMLElement | null;
+      if (!mark || !mark.dataset.feedbackId) return;
+
+      e.preventDefault();
+      window.getSelection()?.removeAllRanges();
+
+      const item = feedbackItemsRef.current.find(f => f.id === mark.dataset.feedbackId);
+      if (!item) return;
+
+      if (item.type === 'comment') {
+        setEditingNote({ itemId: item.id, text: item.comment ?? '' });
+      } else if (item.type === 'suggestion') {
+        const originalText = item.suggestedText ?? '';
+        enterSuggestionModeRef.current(item.charStart, item.charLength, originalText);
+      } else {
+        // like/dislike → focus it (opens the toolbar to toggle or delete)
+        focusOnItem(item.id);
+      }
+    };
+
+    document.addEventListener('dblclick', handleDblClick);
+    return () => document.removeEventListener('dblclick', handleDblClick);
+  }, []);
 
   // Suppress native context menu on touch devices (prevents copy/paste toolbar over selections)
   useEffect(() => {
@@ -1028,11 +1229,17 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
   // Update innerHTML whenever feedbackItems, pending, or focusedId change (not in edit mode)
   // Must be useLayoutEffect so marks exist in DOM before the anchor-position useLayoutEffect reads them
+  // Skip when search is active — search has its own innerHTML management
   useLayoutEffect(() => {
     if (!contentRef.current || !chapterData) return;
     if (editMode) return;
+    if (searchOpen && searchQuery) return;
     contentRef.current.innerHTML = buildHighlightedHtml(chapterData.html, feedbackItems, pending, focusedFeedbackId);
-  }, [chapterData, feedbackItems, pending, focusedFeedbackId, editMode]);
+    // Sync external ref for minimap after DOM is populated
+    if (contentElRef) {
+      (contentElRef as React.MutableRefObject<HTMLDivElement | null>).current = contentRef.current;
+    }
+  }, [chapterData, feedbackItems, pending, focusedFeedbackId, editMode, searchOpen, searchQuery]);
 
   useEffect(() => { fetchChapter(); }, [chapterId]);
 
@@ -1117,6 +1324,23 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     const cd = chapterDataRef.current;
     if (!p || !cd) return;
 
+    // If focused on an existing item, delete the old one first (replace flow)
+    const replacingId = focusedIdRef.current;
+    if (replacingId) {
+      const oldItem = feedbackItemsRef.current.find(f => f.id === replacingId);
+      if (oldItem) {
+        setFeedbackItems(prev => prev.filter(f => f.id !== replacingId));
+        // Fire-and-forget delete of old item on server
+        try {
+          let delUrl: string;
+          if (oldItem.type === 'comment') delUrl = `/api/public/comments/${replacingId}?sessionId=${sessionId}`;
+          else if (oldItem.type === 'suggestion') delUrl = `/api/public/suggestions/${replacingId}?sessionId=${sessionId}`;
+          else delUrl = `/api/public/reactions/${replacingId}?sessionId=${sessionId}`;
+          fetch(delUrl, { method: 'DELETE' });
+        } catch { /* silent */ }
+      }
+    }
+
     const localId = Math.random().toString(36).slice(2);
     const type: FeedbackItem['type'] = p.mode === 'comment' ? 'comment' : p.mode;
 
@@ -1132,8 +1356,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     };
     setFeedbackItems(prev => [...prev, newItem]);
     setPending(null);
+    setFocusedFeedbackId(null);
     window.getSelection()?.removeAllRanges();
-    showToast(p.mode === 'comment' ? 'Comment saved' : p.mode === 'like' ? 'Liked' : 'Noted');
+    showToast(p.mode === 'comment' ? 'Comment saved' : p.mode === 'like' ? 'Marked good' : 'Marked confusing');
 
     try {
       let url: string;
@@ -1215,7 +1440,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
     const suggestedText = mark?.textContent ?? '';
     const meta = suggEditMetaRef.current;
 
-    if (submit && meta && suggestedText && suggestedText !== meta.originalText) {
+    if (submit && meta && suggestedText !== meta.originalText) {
       submitSuggestion(meta.originalText, suggestedText, meta.charStart);
     }
 
@@ -1225,7 +1450,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
   const submitSuggestion = useCallback(async (originalText: string, suggestedText: string, charStartHint: number) => {
     const cd = chapterDataRef.current;
-    if (!cd || !originalText || !suggestedText || originalText === suggestedText) return;
+    if (!cd || !originalText || suggestedText == null || originalText === suggestedText) return;
 
     const localId = Math.random().toString(36).slice(2);
 
@@ -1290,6 +1515,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       anchorY,
       side,
     });
+    if (rect) setSelectionRect({ top: rect.top, left: rect.left, width: rect.width, bottom: rect.bottom });
     setFocusedFeedbackId(itemId);
   }, []);
 
@@ -1306,6 +1532,14 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   // Keydown handler — runs once, reads state via refs
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Ctrl/Cmd+F → open search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setSearchOpen(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+        return;
+      }
+
       // Don't intercept when typing in an input/textarea (e.g. mobile comment pill)
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -1381,7 +1615,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
         }
         return;
       }
-      // Arrow key → toggle like/dislike (only when no comment yet)
+      // Arrow key → toggle good/confusing (only when no comment yet)
       if (p.commentText.length === 0 && e.key.startsWith('Arrow')) {
         e.preventDefault();
         setPending(prev => prev ? { ...prev, mode: prev.mode === 'like' ? 'dislike' : 'like' } : prev);
@@ -1419,8 +1653,9 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       const target = e.target as Node;
       const targetEl = target.nodeType === Node.ELEMENT_NODE ? target as HTMLElement : target.parentElement;
 
-      // Ignore clicks inside margin column
+      // Ignore clicks inside margin column or toolbar/pill UI
       if (targetEl?.closest('[data-margin-col]')) return;
+      if (targetEl?.closest('[data-toolbar]')) return;
 
       const selection = window.getSelection();
 
@@ -1436,6 +1671,16 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
         const charStart = getCharOffset(contentRef.current, range.startContainer, range.startOffset);
         const charEnd = getCharOffset(contentRef.current, range.endContainer, range.endOffset);
         const charLength = Math.max(0, charEnd - charStart);
+
+        // Prevent overlapping feedback — focus existing item instead
+        const overlapping = feedbackItemsRef.current.find(item =>
+          item.charStart < charStart + charLength && charStart < item.charStart + item.charLength
+        );
+        if (overlapping) {
+          window.getSelection()?.removeAllRanges();
+          focusOnItem(overlapping.id);
+          return;
+        }
 
         const marginTop = contentRowRef.current?.getBoundingClientRect().top ?? 0;
         const anchorY = rect.top - marginTop;
@@ -1456,6 +1701,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
           anchorY,
           side,
         });
+        setSelectionRect({ top: rect.top, left: rect.left, width: rect.width, bottom: rect.bottom });
 
         setFocusedFeedbackId(null);
 
@@ -1578,6 +1824,49 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
   return (
     <>
       <HelpButton ref={helpBtnRef} onClick={() => setShowHelp(true)}>?</HelpButton>
+
+      {/* Search bar */}
+      <AnimatePresence>
+        {searchOpen && (
+          <SearchBar
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8, transition: { duration: 0.12 } }}
+          >
+            <SearchInput
+              ref={searchInputRef}
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (e.shiftKey) {
+                    setCurrentMatchIdx(prev => prev > 0 ? prev - 1 : Math.max(0, searchMatches.length - 1));
+                  } else {
+                    setCurrentMatchIdx(prev => prev < searchMatches.length - 1 ? prev + 1 : 0);
+                  }
+                } else if (e.key === 'Escape') {
+                  setSearchOpen(false);
+                  setSearchQuery('');
+                }
+              }}
+            />
+            {searchQuery && (
+              <SearchCount>{searchMatches.length > 0 ? `${currentMatchIdx + 1}/${searchMatches.length}` : '0'}</SearchCount>
+            )}
+            <SearchBtn onClick={() => setCurrentMatchIdx(prev => prev > 0 ? prev - 1 : Math.max(0, searchMatches.length - 1))}>
+              ↑
+            </SearchBtn>
+            <SearchBtn onClick={() => setCurrentMatchIdx(prev => prev < searchMatches.length - 1 ? prev + 1 : 0)}>
+              ↓
+            </SearchBtn>
+            <SearchBtn onClick={() => { setSearchOpen(false); setSearchQuery(''); }}>
+              ✕
+            </SearchBtn>
+          </SearchBar>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showHelp && (
@@ -1843,10 +2132,61 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
       <div ref={scrollSentinelRef} style={{ height: 1 }} />
 
 
+      {/* Selection toolbar: desktop only, shows near highlighted text */}
+      <AnimatePresence>
+        {hasKeyboard && pending && !editMode && selectionRect && (
+          <SelectionToolbar
+            key="selection-toolbar"
+            data-toolbar
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4, transition: { duration: 0.12 } }}
+            style={{
+              top: selectionRect.top - 44 > 0 ? selectionRect.top - 44 : selectionRect.bottom + 8,
+              left: Math.min(window.innerWidth - 260, Math.max(8, selectionRect.left + selectionRect.width / 2 - 120)),
+            }}
+          >
+            <ToolbarBtn
+              $active={pending.mode === 'like' && pending.commentText.length === 0}
+              onClick={() => {
+                pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'like', commentText: '' } : null;
+                setPending(p => p ? { ...p, mode: 'like', commentText: '' } : p);
+                submitPendingRef.current();
+              }}
+            >good</ToolbarBtn>
+            <ToolbarBtn
+              $active={pending.mode === 'dislike' && pending.commentText.length === 0}
+              onClick={() => {
+                pendingRef.current = pendingRef.current ? { ...pendingRef.current, mode: 'dislike', commentText: '' } : null;
+                setPending(p => p ? { ...p, mode: 'dislike', commentText: '' } : p);
+                submitPendingRef.current();
+              }}
+            >confusing</ToolbarBtn>
+            <ToolbarBtn onClick={() => {
+              // For focused items, extract original text from DOM since selectedText may be empty
+              const originalText = pending.selectedText || (contentRef.current ? extractTextRange(contentRef.current, pending.charStart, pending.charLength) : '');
+              if (focusedFeedbackId) deleteFeedback(focusedFeedbackId);
+              enterSuggestionModeRef.current(pending.charStart, pending.charLength, originalText);
+            }}>
+              edit
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => {
+              setPending(p => p ? { ...p, mode: 'comment' } : p);
+            }}>note</ToolbarBtn>
+            {focusedFeedbackId ? (
+              <ToolbarBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</ToolbarBtn>
+            ) : (
+              <ToolbarBtn onClick={() => setPending(null)}>✕</ToolbarBtn>
+            )}
+          </SelectionToolbar>
+        )}
+      </AnimatePresence>
+
       {/* Floating pill: touch/no-keyboard devices only */}
       <AnimatePresence>
         {!hasKeyboard && pending && !editMode && (
           <MobilePill
+            data-toolbar
             initial={{ opacity: 0, y: 20, x: '-50%' }}
             animate={{ opacity: 1, y: 0, x: '-50%' }}
             exit={{ opacity: 0, y: 8, x: '-50%', transition: { duration: 0.15 } }}
@@ -1886,7 +2226,7 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     setPending(p => p ? { ...p, mode: 'like' } : p);
                     submitPendingRef.current();
                   }}
-                >like</PillBtn>
+                >good</PillBtn>
                 <PillBtn
                   $active={pending.mode === 'dislike'}
                   onClick={() => {
@@ -1894,8 +2234,12 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
                     setPending(p => p ? { ...p, mode: 'dislike' } : p);
                     submitPendingRef.current();
                   }}
-                >dislike</PillBtn>
-                <PillBtn onClick={() => enterSuggestionModeRef.current(pending.charStart, pending.charLength, pending.selectedText)}>edit</PillBtn>
+                >confusing</PillBtn>
+                <PillBtn onClick={() => {
+                  const originalText = pending.selectedText || (contentRef.current ? extractTextRange(contentRef.current, pending.charStart, pending.charLength) : '');
+                  if (focusedFeedbackId) deleteFeedback(focusedFeedbackId);
+                  enterSuggestionModeRef.current(pending.charStart, pending.charLength, originalText);
+                }}>edit</PillBtn>
                 <PillBtn onClick={() => { setMobileCommentMode(true); setMobileCommentText(''); }}>note</PillBtn>
                 {focusedFeedbackId ? (
                   <PillBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕</PillBtn>
@@ -1910,16 +2254,31 @@ export default function ChapterReader({ chapterId, sessionId, workId, prefetched
 
       {/* Desktop hint bar */}
       <AnimatePresence>
-        {hasKeyboard && pending && !editMode && (
+        {hasKeyboard && !editMode && (pending || focusedFeedbackId) && (
           <DesktopHint
             key="desktop-hint"
+            data-toolbar
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {pending.mode === 'comment'
-              ? '↵ submit · esc cancel · ⌫ delete char'
-              : '↑↓ toggle · type to note · tab to edit · ↵ submit · esc cancel'}
+            {focusedFeedbackId && !pending ? (
+              // Focused on existing highlight (no pending toolbar)
+              <>
+                <span>esc unfocus</span>
+                <HintDeleteBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕ delete</HintDeleteBtn>
+              </>
+            ) : pending?.mode === 'comment' ? (
+              <>
+                <span>↵ submit · esc cancel · ⌫ delete char</span>
+                {focusedFeedbackId && <HintDeleteBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕ delete</HintDeleteBtn>}
+              </>
+            ) : (
+              <>
+                <span>↑↓ toggle · type to note · tab to edit · ↵ submit · esc cancel</span>
+                {focusedFeedbackId && <HintDeleteBtn onClick={() => deleteFeedback(focusedFeedbackId)}>✕ delete</HintDeleteBtn>}
+              </>
+            )}
           </DesktopHint>
         )}
       </AnimatePresence>

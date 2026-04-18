@@ -32,13 +32,11 @@ const AnnotatedChapterText = styled(ChapterText)`
   }
 
   .line-highlight {
-    border-radius: 0.8em 0.3em;
-    margin: 0 -0.4em;
-    padding: 0.1em 0.4em;
+    padding: 0 0.4em; margin: 0 -0.4em; border-radius: 0.3em;
     background-color: transparent;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
-    transition: background-image 0.15s ease;
+    transition: background-image 0.15s ease, box-shadow 0.15s ease;
   }
 
   .suggestion-preview {

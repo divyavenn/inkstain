@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { Chapter } from '@/types';
 import ChapterReader from './ChapterReader';
+import Minimap from './Minimap';
 
 const DotLottiePlayer = dynamic(
   () => import('@dotlottie/react-player').then(m => m.DotLottiePlayer),
@@ -24,16 +25,6 @@ const Page = styled.div`
   min-height: 100vh;
   ${SURFACE_TEXTURE}
   position: relative;
-`;
-
-/* Invisible strip on the left edge that triggers the sidebar */
-const SidebarEdge = styled.div`
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 20px;
-  height: 100vh;
-  z-index: 200;
 `;
 
 const ChaptersSidebar = styled(motion.aside)`
@@ -94,6 +85,54 @@ const ChapterItemTitle = styled.div<{ $active: boolean }>`
   text-overflow: ellipsis;
 `;
 
+const MobileWarning = styled.div`
+  display: none;
+  @media (max-width: 768px) {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: ${SURFACE_BASE};
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    font-family: var(--font-inter), system-ui, sans-serif;
+    color: #2a2a26;
+    flex-direction: column;
+    gap: 1rem;
+  }
+`;
+
+const MobileWarningTitle = styled.div`
+  font-family: var(--font-playfair), Georgia, serif;
+  font-size: 1.25rem;
+  color: #1a1a18;
+`;
+
+const MobileWarningText = styled.div`
+  font-size: 0.85rem;
+  color: rgba(26,26,24,0.5);
+  line-height: 1.6;
+  max-width: 280px;
+`;
+
+const MobileDismissBtn = styled.button`
+  margin-top: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  border: 1px solid rgba(26,26,24,0.15);
+  border-radius: 6px;
+  background: transparent;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 0.8rem;
+  color: #2a2a26;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(26,26,24,0.04);
+  }
+`;
+
 interface ReaderViewProps {
   sessionId: string | null;
   workId: string | null;
@@ -102,9 +141,11 @@ interface ReaderViewProps {
 export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [currentChapterId, setCurrentChapterId] = useState<string | null>(null);
+  const [mobileWarningDismissed, setMobileWarningDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const chapterCache = useRef<Record<string, Record<string, unknown>>>({});
+  const chapterContentRef = useRef<HTMLDivElement | null>(null);
 
   const prefetchChapter = useCallback(async (id: string) => {
     if (chapterCache.current[id]) return;
@@ -152,7 +193,19 @@ export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
 
   return (
     <Page>
-      <SidebarEdge onMouseEnter={() => setSidebarOpen(true)} />
+      {!mobileWarningDismissed && (
+        <MobileWarning>
+          <MobileWarningTitle>Best on desktop</MobileWarningTitle>
+          <MobileWarningText>
+            InkLink's annotation features are designed for desktop browsers. Please visit on a computer for the full experience.
+          </MobileWarningText>
+          <MobileDismissBtn onClick={() => setMobileWarningDismissed(true)}>
+            Continue anyway
+          </MobileDismissBtn>
+        </MobileWarning>
+      )}
+
+      <Minimap contentRef={chapterContentRef} onHoverStart={() => setSidebarOpen(true)} />
 
       <AnimatePresence>
         {sidebarOpen && (
@@ -198,6 +251,7 @@ export default function ReaderView({ sessionId, workId }: ReaderViewProps) {
             prevChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) - 1]?.id ?? null}
             nextChapterId={chapters[chapters.findIndex(c => c.id === currentChapterId) + 1]?.id ?? null}
             onNavigate={setCurrentChapterId}
+            contentElRef={chapterContentRef}
           />
         )}
       </AnimatePresence>

@@ -289,9 +289,9 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
     const likes = hits.filter(h => h.type === 'like');
     const dislikes = hits.filter(h => h.type === 'dislike');
 
-    for (const { label, items } of [
-      { label: 'Liked by', items: likes },
-      { label: 'Disliked by', items: dislikes },
+    for (const { label, items, noun } of [
+      { label: 'Good', items: likes, noun: 'good' },
+      { label: 'Confusing', items: dislikes, noun: 'confusing' },
     ]) {
       if (items.length === 0) continue;
       const totalCount = items.reduce((s, i) => s + i.count, 0);
@@ -299,7 +299,7 @@ export default function LikesHeatmapView({ chapterHtml, heatmapLines, ranges }: 
       if (names.length > 0) {
         lines.push(`${label}: ${names.join(', ')} (${totalCount})`);
       } else {
-        lines.push(`${totalCount} ${items[0].type}${totalCount !== 1 ? 's' : ''}`);
+        lines.push(`${totalCount} marked ${noun}`);
       }
     }
 
